@@ -1,0 +1,42 @@
+version: "3.4"
+name: polar
+  
+networks:
+  polar:
+    driver: bridge
+    
+services:
+  consumer_api:
+    container_name: consumer_api
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: polar-consumer
+    env_file:
+      - containers/api/api.env
+    networks:
+      - polar
+    ports:
+      - 5002:5002
+    depends_on:
+      consumer_db:
+        condition: service_healthy
+    
+  consumer_db:
+    container_name: consumer_db
+    image: postgres:latest
+    ports:
+      - "5433:5432"
+    restart: always
+    volumes:
+      - ./containers/db_data:/var/lib/postgresql/data
+    networks:
+      - polar
+    env_file:
+      - containers/db/db.env
+    healthcheck:
+      test: ["CMD-SHELL", "sh -c 'pg_isready -U postgres -d Consumer'"]
+      interval: 60s
+      timeout: 30s
+      retries: 5
+      start_period: 80s
