@@ -345,7 +345,7 @@ Updates a customer by ID.
 
 **Example Request:**
 ```bash
-curl -X PATCH "https://localhost:44302/api/v1/customers/98acc088-4f93-43e1-b5e4-d2ce6749aed8" \
+curl -X PATCH "https://localhost:44302/api/v1/customers/5498c6ae-2e74-40bf-bd13-a765e9d90c9b" \
   -H "Content-Type: application/json" \
   -H "If-Match: \"1\"" \ 
   -d '{
