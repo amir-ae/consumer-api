@@ -10,6 +10,10 @@ public class MartenTableMetaDataCustomer : MartenTableMetaDataBase
     {
         storeOptions.Schema.For<Customer>().Identity(x => x.AggregateId);
         storeOptions.Schema.For<Customer>().UseNumericRevisions(true);
+        storeOptions.Schema.For<Customer>()
+            .Index(x => x.ProductIds)
+            .Index(x => x.CreatedAt)
+            .Index(x => x.LastModifiedAt!);
         storeOptions.Projections.Snapshot<Customer>(SnapshotLifecycle.Inline);
     }
 }

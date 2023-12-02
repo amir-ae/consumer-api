@@ -7,7 +7,9 @@ using Consumer.Domain.Products;
 using Consumer.Domain.Products.Events;
 using Consumer.Domain.Products.ValueObjects;
 using Consumer.Infrastructure.Persistence.Extensions;
+using LinqKit;
 using Marten.Events.CodeGeneration;
+using Marten.Pagination;
 
 namespace Consumer.Infrastructure.Persistence.Repositories;
 
@@ -55,8 +57,8 @@ public class ProductRepository : IProductRepository
         Customer? owner = null;
         Customer? dealer = null;
         var product = await _session.Query<Product>()
-            .Include<Customer>(x => x.OwnerId!.Value, c => owner = c)
-            .Include<Customer>(x => x.DealerId!.Value, c => dealer = c)
+            .Include<Customer>(x => owner = x).On(p => p.OwnerId!.Value)
+            .Include<Customer>(x => dealer = x).On(p => p.DealerId!.Value)
             .FirstOrDefaultAsync(p => p.Id.Value == productId.Value, token: ct);
 
         if (product is null) return null;
@@ -79,8 +81,8 @@ public class ProductRepository : IProductRepository
         Customer? owner = null;
         Customer? dealer = null;
         var product = await _session.Query<Product>()
-            .Include<Customer>(x => x.OwnerId!.Value, c => owner = c)
-            .Include<Customer>(x => x.DealerId!.Value, c => dealer = c)
+            .Include<Customer>(x => owner = x).On(p => p.OwnerId!.Value)
+            .Include<Customer>(x => dealer = x).On(p => p.DealerId!.Value)
             .FirstOrDefaultAsync(p => p.Orders.Any(order => order.Id.Value == orderId.Value), token: ct);
         
         if (product is null) return null;
@@ -95,8 +97,8 @@ public class ProductRepository : IProductRepository
         var owners = new List<Customer>();
         var dealers = new List<Customer>();
         var products = await _session.Query<Product>()
-            .Include<Customer>(p => p.OwnerId!.Value, c => owners.Add(c))
-            .Include<Customer>(p => p.DealerId!.Value, c => dealers.Add(c))
+            .Include(owners).On(p => p.OwnerId!.Value)
+            .Include(dealers).On(p => p.DealerId!.Value)
             .Where(p => p.Orders.Any(o => o.CentreId.Value == centreId.Value))
             .OrderByDescending(p => p.CreatedAt)
             .ThenByDescending(p => p.LastModifiedAt)
@@ -128,7 +130,7 @@ public class ProductRepository : IProductRepository
         public Guid CentreId { get; init; }
         public int SkipSize => PageSize * (PageNumber - 1);
         public Expression<Func<IMartenQueryable<Product>, IEnumerable<Product>>> QueryIs() => query 
-            => query.Where(x => !x.IsDeleted && x.Orders.Any(o => o.CentreId != null && o.CentreId.Value == CentreId))
+            => query.Where(x => !x.IsDeleted && x.Orders.Any(o => o.CentreId != null! && o.CentreId.Value == CentreId))
                 .OrderByDescending(x => x.CreatedAt)
                 .ThenByDescending(x => x.LastModifiedAt)
                 .Skip(SkipSize)
@@ -148,7 +150,7 @@ public class ProductRepository : IProductRepository
     {
         public Guid CentreId { get; init; }
         public Expression<Func<IMartenQueryable<Product>, IEnumerable<Product>>> QueryIs() => query 
-            => query.Where(x => !x.IsDeleted && x.Orders.Any(o => o.CentreId != null && o.CentreId.Value == CentreId))
+            => query.Where(x => !x.IsDeleted && x.Orders.Any(o => o.CentreId != null! && o.CentreId.Value == CentreId))
                 .OrderByDescending(x => x.CreatedAt)
                 .ThenByDescending(x => x.LastModifiedAt);
     }
@@ -209,14 +211,67 @@ public class ProductRepository : IProductRepository
     public async Task<(List<Product>, long)> ByPageDetailAsync(int pageSize, int pageNumber, bool? nextPage, 
         ProductId? keyId, CentreId? centreId, CancellationToken ct = default)
     {
-        var (products, totalCount) = await ByPageAsync(pageSize, pageNumber, nextPage, keyId, centreId, ct);
+        List<Product> products;
+        List<Customer> customers = new();
+        long totalCount;
 
-        var customerIds = new List<string>();
-        customerIds.AddRange(products.Select(p => p.OwnerId?.Value).OfType<string>());
-        customerIds.AddRange(products.Select(p => p.DealerId?.Value).OfType<string>());
+        var predicate = PredicateBuilder.New<Product>(x => !x.IsDeleted);
+        if (centreId is not null)
+        {
+            predicate = predicate.And(x => x.Orders.Any(o => o.CentreId != null! && o.CentreId.Value == centreId.Value));
+        }
         
-        var customers = await _session.LoadManyAsync<Customer>(ct, customerIds.Distinct());
+        if (!nextPage.HasValue || keyId is null || !await CheckByIdAsync(keyId, ct))
+        {
+            products = (await _session.Query<Product>()
+                .Include(customers).On(x => x.OwnerId!.Value)
+                .Include(customers).On(x => x.DealerId!.Value)
+                .Where(predicate)
+                .OrderByDescending(x => x.CreatedAt)
+                .ThenByDescending(x => x.LastModifiedAt)
+                .Stats(out var stats)
+                .ToPagedListAsync(pageNumber, pageSize, ct)).ToList();
+                
+            totalCount = stats.TotalResults;
+        }
+        else
+        {
+            var keyRecord = await ByIdAsync(keyId, ct);
 
+            var result = (await _session.Query<Product>()
+                .Where(predicate)
+                .OrderByDescending(x => x.CreatedAt)
+                .ThenByDescending(x => x.LastModifiedAt)
+                .ToListAsync(ct)).ToList();
+            
+            if (nextPage == true)
+            {
+                products = result
+                    .SkipWhile(p => p.Id != keyRecord!.Id)
+                    .Where(p => p.Id != keyRecord!.Id)
+                    .Take(pageSize)
+                    .ToList();
+            }
+            else
+            {
+                result.Reverse();
+                products = result
+                    .SkipWhile(p => p.Id != keyRecord!.Id)
+                    .Where(p => p.Id != keyRecord!.Id)
+                    .Take(pageSize)
+                    .Reverse()
+                    .ToList();
+            }
+            
+            totalCount = result.Count;
+            
+            var customerIds = new List<string>();
+            customerIds.AddRange(products.Select(p => p.OwnerId?.Value).OfType<string>());
+            customerIds.AddRange(products.Select(p => p.DealerId?.Value).OfType<string>());
+        
+            customers = (await _session.LoadManyAsync<Customer>(ct, customerIds.Distinct())).ToList();
+        }
+        
         return (AddCustomerDetailToProducts(products, customers), totalCount);
     }
 
@@ -232,7 +287,7 @@ public class ProductRepository : IProductRepository
     {
         public Guid CentreId { get; init; }
         public Expression<Func<IMartenQueryable<Product>, IEnumerable<Product>>> QueryIs() => query 
-            => query.Where(x => !x.IsDeleted && x.Orders.Any(o => o.CentreId != null && o.CentreId.Value == CentreId))
+            => query.Where(x => !x.IsDeleted && x.Orders.Any(o => o.CentreId != null! && o.CentreId.Value == CentreId))
                 .OrderByDescending(x => x.CreatedAt)
                 .ThenByDescending(x => x.LastModifiedAt);
     }
@@ -251,8 +306,8 @@ public class ProductRepository : IProductRepository
         var owners = new List<Customer>();
         var dealers = new List<Customer>();
         var products = await _session.Query<Product>()
-            .Include<Customer>(p => p.OwnerId!.Value, c => owners.Add(c))
-            .Include<Customer>(p => p.DealerId!.Value, c => dealers.Add(c))
+            .Include(owners).On(x => x.OwnerId!.Value)
+            .Include(dealers).On(x => x.DealerId!.Value)
             .Where(centreId is null
                 ? p => !p.IsDeleted
                 : p => !p.IsDeleted && p.Orders.Any(o => o.CentreId.Value == centreId.Value))
@@ -290,21 +345,30 @@ public class ProductRepository : IProductRepository
     }
     
     private List<Product> AddCustomerDetailToProducts(
-        IEnumerable<Product> products, 
-        IEnumerable<Customer> customers, 
-        IEnumerable<Customer>? dealers = null)
+        IEnumerable<Product> productsEnumerable, 
+        IEnumerable<Customer> customersEnumerable, 
+        IEnumerable<Customer>? dealersEnumerable = null)
     {
-        var productsArr = products as Product[] ?? products.ToArray();
-        var customersArr = customers as Customer[] ?? customers.ToArray();
-        var dealersArr = dealers as Customer[] ?? dealers?.ToArray();
+        var products = productsEnumerable as Product[] ?? productsEnumerable.ToArray();
+        var customers = customersEnumerable as Customer[] ?? customersEnumerable.ToArray();
+        var dealers = dealersEnumerable as Customer[] ?? dealersEnumerable?.ToArray();
         
-        for (var i = 0; i < productsArr.Length; i++)
-        {
-            productsArr[i].AddOwner(customersArr.FirstOrDefault(c => c.Id == productsArr[i].OwnerId));
-            productsArr[i].AddDealer((dealersArr ?? customersArr).FirstOrDefault(c => c.Id == productsArr[i].DealerId));
-        }
+        var customerDictionary = customers.ToDictionary(c => c.Id);
+        var dealerDictionary = (dealers ?? customers).ToDictionary(c => c.Id);
 
-        return productsArr.ToList();
+        Parallel.ForEach(products, product =>
+        {
+            if (product.OwnerId is not null && customerDictionary.TryGetValue(product.OwnerId, out var owner))
+            {
+                product.AddOwner(owner);
+            }
+            if (product.DealerId is not null && dealerDictionary.TryGetValue(product.DealerId, out var dealer))
+            {
+                product.AddDealer(dealer);
+            }
+        });
+
+        return products.ToList();
     }
 
     public void Dispose()

@@ -10,6 +10,11 @@ public class MartenTableMetaDataProduct : MartenTableMetaDataBase
     {
         storeOptions.Schema.For<Product>().Identity(x => x.AggregateId);
         storeOptions.Schema.For<Product>().UseNumericRevisions(true);
+        storeOptions.Schema.For<Product>()
+            .Index(x => x.OwnerId!)
+            .Index(x => x.DealerId!)
+            .Index(x => x.CreatedAt)
+            .Index(x => x.LastModifiedAt!);
         storeOptions.Projections.Snapshot<Product>(SnapshotLifecycle.Inline);
     }
 }
