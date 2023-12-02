@@ -17,12 +17,12 @@ public class CustomerResource : ICustomerResource
         _client = client;
     }
 
-    public async Task<ErrorOr<PaginatedList<CustomerResponse>>> ByPage(int? pageSize, int? pageIndex, 
+    public async Task<ErrorOr<PaginatedList<CustomerResponse>>> ByPage(int? pageSize, int? pageNumber, 
         bool? nextPage = null, string? keyId = null, Guid? centreId = null, CancellationToken ct = default)
     {
         var queries = new Dictionary<string, string>();
         if (pageSize.HasValue) queries.Add(nameof(pageSize), pageSize.Value.ToString());
-        if (pageIndex.HasValue) queries.Add(nameof(pageIndex), pageIndex.Value.ToString());
+        if (pageNumber.HasValue) queries.Add(nameof(pageNumber), pageNumber.Value.ToString());
         if (nextPage.HasValue) queries.Add(nameof(nextPage), nextPage.Value.ToString());
         if (!string.IsNullOrWhiteSpace(keyId)) queries.Add(nameof(keyId), keyId);
         if (centreId.HasValue) queries.Add(nameof(centreId), centreId.Value.ToString());
@@ -31,12 +31,12 @@ public class CustomerResource : ICustomerResource
         return await _client.Get<PaginatedList<CustomerResponse>>(uri, ct);
     }
 
-    public async Task<ErrorOr<PaginatedList<CustomerResponse>>> ByPageDetail(int? pageSize, int? pageIndex, 
+    public async Task<ErrorOr<PaginatedList<CustomerResponse>>> ByPageDetail(int? pageSize, int? pageNumber, 
         bool? nextPage = null, string? keyId = null, Guid? centreId = null, CancellationToken ct = default)
     {
         var queries = new Dictionary<string, string>();
         if (pageSize.HasValue) queries.Add(nameof(pageSize), pageSize.Value.ToString());
-        if (pageIndex.HasValue) queries.Add(nameof(pageIndex), pageIndex.Value.ToString());
+        if (pageNumber.HasValue) queries.Add(nameof(pageNumber), pageNumber.Value.ToString());
         if (nextPage.HasValue) queries.Add(nameof(nextPage), nextPage.Value.ToString());
         if (!string.IsNullOrWhiteSpace(keyId)) queries.Add(nameof(keyId), keyId);
         if (centreId.HasValue) queries.Add(nameof(centreId), centreId.Value.ToString());

@@ -40,21 +40,23 @@ public sealed class UpdateProductCommandHandler : IRequestHandler<UpdateProductC
 
         var product = await _productRepository.ByIdAsync(productId, ct);
         if (product is null) return Error.NotFound(
-            nameof(ProductId), $"{nameof(UpsertProductCommand)} with id {productId} is not found.");
-
-        Action<ProductEvent, int?> append = _productRepository.Append;
-        Action<CustomerEvent, int?> customerAppend = _customerRepository.Append;
-        int? customerVersion = null;
+            nameof(ProductId), $"{nameof(Product)} with id {productId} is not found.");
+        
+        if (version.HasValue && version != product.Version) return Error.Conflict(
+            nameof(product.Version), $"{nameof(product.Version)} mismatch.");
+        
+        Action<ProductEvent> append = _productRepository.Append;
+        Action<CustomerEvent> customerAppend = _customerRepository.Append;
         ProductUpdateMessage? updateMessage = null;
         
-        product = product.UpdateBrand(brand, updateBy, updateAt, append, ref version, out bool brandUpdated);
+        product = product.UpdateBrand(brand, updateBy, updateAt, append, out bool brandUpdated);
         if (brandUpdated)
         {
             updateMessage = new ProductUpdateMessage(productId.Value, 
                 brand, null, updateBy.Value, updateAt);
         }
         
-        product = product.UpdateModel(model, updateBy, updateAt, append, ref version, out bool modelUpdated);
+        product = product.UpdateModel(model, updateBy, updateAt, append, out bool modelUpdated);
         if (modelUpdated)
         {
             if (updateMessage is null)
@@ -67,22 +69,22 @@ public sealed class UpdateProductCommandHandler : IRequestHandler<UpdateProductC
             }
         }
         
-        product = product.UpdateDeviceType(deviceType, updateBy, updateAt, append, ref version);
+        product = product.UpdateDeviceType(deviceType, updateBy, updateAt, append);
 
-        product = product.UpdatePanel(panelModel, panelSerialNumber, updateBy, updateAt, append, ref version);
+        product = product.UpdatePanel(panelModel, panelSerialNumber, updateBy, updateAt, append);
 
-        product = product.UpdateWarrantyCardNumber(warrantyCardNumber, updateBy, updateAt, append, ref version);
+        product = product.UpdateWarrantyCardNumber(warrantyCardNumber, updateBy, updateAt, append);
         
-        product = product.UpdatePurchaseData(dateOfPurchase, invoiceNumber, purchasePrice, updateBy, updateAt, append, ref version);
+        product = product.UpdatePurchaseData(dateOfPurchase, invoiceNumber, purchasePrice, updateBy, updateAt, append);
 
         product = product.UpdateUnrepairable(isUnrepairable, dateOfDemandForCompensation, demanderFullName, 
-            updateBy, updateAt, append, ref version);
+            updateBy, updateAt, append);
 
-        product = product.AddOrders(orders, updateBy, updateAt, append, ref version);
+        product = product.AddOrders(orders, updateBy, updateAt, append);
 
         if (!onCreate)
         {
-            product = product.RemoveOrders(orders, updateBy, updateAt, append, ref version);
+            product = product.RemoveOrders(orders, updateBy, updateAt, append);
         }
 
         var currentOwnerId = product.OwnerId;
@@ -158,14 +160,14 @@ public sealed class UpdateProductCommandHandler : IRequestHandler<UpdateProductC
                 }
 
                 ownerName = newOwner.FullName;
-                newOwner.AddProduct(productId, updateBy, updateAt, customerAppend, ref customerVersion);
+                newOwner.AddProduct(productId, updateBy, updateAt, customerAppend);
             }
             
-            product = product.UpdateOwner(ownerId, ownerName, updateBy, updateAt, append, ref version, out bool ownerUpdated);
+            product = product.UpdateOwner(ownerId, ownerName, updateBy, updateAt, append, out bool ownerUpdated);
             if (ownerUpdated && currentOwnerId is not null && !onChangingRole)
             {
                 var currentOwner = await _customerRepository.ByIdAsync(currentOwnerId, ct);
-                currentOwner?.RemoveProduct(productId, updateBy, updateAt, customerAppend, ref customerVersion);
+                currentOwner?.RemoveProduct(productId, updateBy, updateAt, customerAppend);
             }
         }
 
@@ -224,14 +226,14 @@ public sealed class UpdateProductCommandHandler : IRequestHandler<UpdateProductC
                 }
                 
                 dealerName = newDealer.FullName;
-                newDealer.AddProduct(productId, updateBy, updateAt, customerAppend, ref customerVersion);
+                newDealer.AddProduct(productId, updateBy, updateAt, customerAppend);
             }
             
-            product = product.UpdateDealer(dealerId, dealerName, updateBy, updateAt, append, ref version, out bool dealerUpdated);
+            product.UpdateDealer(dealerId, dealerName, updateBy, updateAt, append, out bool dealerUpdated);
             if (dealerUpdated && currentDealerId is not null && !onChangingRole)
             {
                 var currentDealer = await _customerRepository.ByIdAsync(currentDealerId, ct);
-                currentDealer?.RemoveProduct(productId, updateBy, updateAt, customerAppend, ref customerVersion);
+                currentDealer?.RemoveProduct(productId, updateBy, updateAt, customerAppend);
             }
         }
 
@@ -242,6 +244,10 @@ public sealed class UpdateProductCommandHandler : IRequestHandler<UpdateProductC
         
         await _productRepository.SaveChangesAsync(ct);
 
-        return product;
+        var result = await _productRepository.ByStreamIdAsync(productId, ct);
+        if (result is null) return Error.Unexpected(
+            nameof(ProductId), $"{nameof(Product)} stream with id {productId} is not found.");
+
+        return result;
     }
 }

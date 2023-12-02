@@ -118,7 +118,7 @@ public static class DependencyInjectionRegister
             }
         })
             .ApplyAllDatabaseChangesOnStartup()
-            .UseDirtyTrackedSessions()
+            .UseLightweightSessions()
             .AddAsyncDaemon(DaemonMode.Solo);
         
         services.Configure<JsonOptions>(o => o.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));

@@ -7,9 +7,9 @@ namespace Consumer.API.Client.Resources.Interfaces;
 
 public interface ICustomerResource
 {
-    Task<ErrorOr<PaginatedList<CustomerResponse>>> ByPage(int? pageSize, int? pageIndex, bool? nextPage = null, 
+    Task<ErrorOr<PaginatedList<CustomerResponse>>> ByPage(int? pageSize, int? pageNumber, bool? nextPage = null, 
         string? keyId = null, Guid? centreId = null, CancellationToken ct = default);
-    Task<ErrorOr<PaginatedList<CustomerResponse>>> ByPageDetail(int? pageSize, int? pageIndex, bool? nextPage = null, 
+    Task<ErrorOr<PaginatedList<CustomerResponse>>> ByPageDetail(int? pageSize, int? pageNumber, bool? nextPage = null, 
         string? keyId = null, Guid? centreId = null, CancellationToken ct = default);
     Task<ErrorOr<IList<CustomerForListingResponse>>> List(Guid? centreId = null, CancellationToken ct = default);
     Task<ErrorOr<IList<CustomerResponse>>> ListDetail(Guid? centreId = null, CancellationToken ct = default);

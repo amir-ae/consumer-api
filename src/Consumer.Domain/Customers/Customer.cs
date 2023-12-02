@@ -106,11 +106,11 @@ public sealed record Customer : AggregateRoot<CustomerId, string>
     }
 
     public Customer UpdateName(string? firstName, string? middleName, string? lastName, AppUserId updateBy, 
-        DateTimeOffset? updateAt, Action<CustomerNameChangedEvent, int?> append, ref int? version, out bool shouldUpdate)
+        DateTimeOffset? updateAt, Action<CustomerNameChangedEvent> append, out bool shouldUpdate)
     {
-        shouldUpdate = !string.IsNullOrEmpty(firstName) && firstName != FirstName
-                       || !string.IsNullOrEmpty(middleName) && middleName != MiddleName
-                       || !string.IsNullOrEmpty(lastName) && lastName != LastName;
+        shouldUpdate = !string.IsNullOrWhiteSpace(firstName) && firstName != FirstName
+                       || !string.IsNullOrWhiteSpace(middleName) && middleName != MiddleName
+                       || !string.IsNullOrWhiteSpace(lastName) && lastName != LastName;
         if (!shouldUpdate) return this;
         
         var @event = new CustomerNameChangedEvent(
@@ -122,14 +122,14 @@ public sealed record Customer : AggregateRoot<CustomerId, string>
             updateBy,
             updateAt);
         
-        append(@event, version++);
+        append(@event);
         return Apply(@event);
     }
 
     public Customer UpdatePhoneNumber(string? phoneNumber, AppUserId updateBy, DateTimeOffset? updateAt,
-        Action<CustomerPhoneNumberChangedEvent, int?> append, ref int? version, out bool shouldUpdate)
+        Action<CustomerPhoneNumberChangedEvent> append, out bool shouldUpdate)
     {
-        shouldUpdate = !string.IsNullOrEmpty(phoneNumber) && phoneNumber != PhoneNumber;
+        shouldUpdate = !string.IsNullOrWhiteSpace(phoneNumber) && phoneNumber != PhoneNumber;
         if (!shouldUpdate) return this;
         
         var @event = new CustomerPhoneNumberChangedEvent(
@@ -138,15 +138,15 @@ public sealed record Customer : AggregateRoot<CustomerId, string>
             updateBy,
             updateAt);
         
-        append(@event, version++);
+        append(@event);
         return Apply(@event);
     }
     
     public Customer UpdateAddress(CityId? cityId, string? address, AppUserId updateBy, DateTimeOffset? updateAt,
-        Action<CustomerAddressChangedEvent, int?> append, ref int? version, out bool shouldUpdate)
+        Action<CustomerAddressChangedEvent> append, out bool shouldUpdate)
     {
         shouldUpdate = cityId is not null && cityId != CityId
-                       || !string.IsNullOrEmpty(address) && address != Address;
+                       || !string.IsNullOrWhiteSpace(address) && address != Address;
         if (!shouldUpdate) return this;
         
         var @event = new CustomerAddressChangedEvent(
@@ -156,12 +156,12 @@ public sealed record Customer : AggregateRoot<CustomerId, string>
             updateBy,
             updateAt);
         
-        append(@event, version++);
+        append(@event);
         return Apply(@event);
     }
     
     public Customer UpdateRole(CustomerRole? role, AppUserId updateBy, DateTimeOffset? updateAt,
-        Action<CustomerRoleChangedEvent, int?> append, ref int? version, out bool shouldUpdate)
+        Action<CustomerRoleChangedEvent> append, out bool shouldUpdate)
     {
         shouldUpdate = role is not null && role != Role;
         if (!shouldUpdate) return this;
@@ -172,12 +172,12 @@ public sealed record Customer : AggregateRoot<CustomerId, string>
             updateBy,
             updateAt);
         
-        append(@event, version++);
+        append(@event);
         return Apply(@event);
     }
     
     public Customer AddOrders(HashSet<Order>? orders, AppUserId updateBy, DateTimeOffset? updateAt,
-        Action<CustomerOrderAddedEvent, int?> append, ref int? version, out bool shouldUpdate)
+        Action<CustomerOrderAddedEvent> append, out bool shouldUpdate)
     {
         shouldUpdate = orders is not null && !orders.SetEquals(Orders);
         if (!shouldUpdate) return this;
@@ -192,7 +192,7 @@ public sealed record Customer : AggregateRoot<CustomerId, string>
                 updateBy,
                 updateAt);
             
-            append(@event, version++);
+            append(@event);
             customer = Apply(@event);
         }
 
@@ -200,7 +200,7 @@ public sealed record Customer : AggregateRoot<CustomerId, string>
     }
     
     public Customer RemoveOrders(HashSet<Order>? orders, AppUserId updateBy, DateTimeOffset? updateAt, 
-        Action<CustomerOrderRemovedEvent, int?> append, ref int? version, out bool shouldUpdate)
+        Action<CustomerOrderRemovedEvent> append, out bool shouldUpdate)
     {
         shouldUpdate = orders is not null && !orders.SetEquals(Orders);
         if (!shouldUpdate) return this;
@@ -215,7 +215,7 @@ public sealed record Customer : AggregateRoot<CustomerId, string>
                 updateBy,
                 updateAt);
             
-            append(@event, version++);
+            append(@event);
             customer = Apply(@event);
         }
 
@@ -223,7 +223,7 @@ public sealed record Customer : AggregateRoot<CustomerId, string>
     }
     
     public Customer AddProduct(ProductId productId, AppUserId updateBy, DateTimeOffset? updateAt,
-        Action<CustomerProductAddedEvent, int?> append, ref int? version, out bool shouldUpdate)
+        Action<CustomerProductAddedEvent> append, out bool shouldUpdate)
     {
         shouldUpdate = !ProductIds.Contains(productId);
         if (!shouldUpdate) return this;
@@ -234,12 +234,12 @@ public sealed record Customer : AggregateRoot<CustomerId, string>
             updateBy,
             updateAt);
         
-        append(@event, version++);
+        append(@event);
         return Apply(@event);
     }
     
     public Customer RemoveProduct(ProductId productId, AppUserId updateBy, DateTimeOffset? updateAt,
-        Action<CustomerProductRemovedEvent, int?> append, ref int? version, out bool shouldUpdate)
+        Action<CustomerProductRemovedEvent> append, out bool shouldUpdate)
     {
         shouldUpdate = ProductIds.Contains(productId);
         if (!shouldUpdate) return this;
@@ -250,74 +250,74 @@ public sealed record Customer : AggregateRoot<CustomerId, string>
             updateBy,
             updateAt);
         
-        append(@event, version++);
+        append(@event);
         return Apply(@event);
     }
     
-    public Customer Activate(AppUserId activateBy, Action<CustomerActivatedEvent, int?> append)
+    public Customer Activate(AppUserId activateBy, Action<CustomerActivatedEvent> append)
     {
         if (IsActive) return this;
         
         var @event = new CustomerActivatedEvent(Id, activateBy);
         
-        append(@event, null);
+        append(@event);
         return Apply(@event);
     }
     
-    public Customer Deactivate(AppUserId deactivateBy, Action<CustomerDeactivatedEvent, int?> append)
+    public Customer Deactivate(AppUserId deactivateBy, Action<CustomerDeactivatedEvent> append)
     {
         if (!IsActive) return this;
         
         var @event = new CustomerDeactivatedEvent(Id, deactivateBy);
         
-        append(@event, null);
+        append(@event);
         return Apply(@event);
     }
     
-    public Customer Delete(AppUserId deleteBy, Action<CustomerDeletedEvent, int?> append)
+    public Customer Delete(AppUserId deleteBy, Action<CustomerDeletedEvent> append)
     {
         if (IsDeleted) return this;
         
         var @event = new CustomerDeletedEvent(Id, deleteBy);
         
-        append(@event, null);
+        append(@event);
         return Apply(@event);
     }
     
-    public Customer Undelete(AppUserId undeleteBy, Action<CustomerUndeletedEvent, int?> append)
+    public Customer Undelete(AppUserId undeleteBy, Action<CustomerUndeletedEvent> append)
     {
         if (!IsDeleted) return this;
         
         var @event = new CustomerUndeletedEvent(Id, undeleteBy);
         
-        append(@event, null);
+        append(@event);
         return Apply(@event);
     }
     
     public Customer UpdateName(string? firstName, string? middleName, string? lastName, AppUserId updateBy,
-        DateTimeOffset? updateAt, Action<CustomerNameChangedEvent, int?> append, ref int? version)
-        => UpdateName(firstName, middleName, lastName, updateBy, updateAt, append, ref version, out _);
+        DateTimeOffset? updateAt, Action<CustomerNameChangedEvent> append)
+        => UpdateName(firstName, middleName, lastName, updateBy, updateAt, append, out _);
     public Customer UpdatePhoneNumber(string? phoneNumber, AppUserId updateBy, DateTimeOffset? updateAt,
-        Action<CustomerPhoneNumberChangedEvent, int?> append, ref int? version)
-        => UpdatePhoneNumber(phoneNumber, updateBy, updateAt, append, ref version, out _);
+        Action<CustomerPhoneNumberChangedEvent> append)
+        => UpdatePhoneNumber(phoneNumber, updateBy, updateAt, append, out _);
     public Customer UpdateAddress(CityId? cityId, string? address, AppUserId updateBy, DateTimeOffset? updateAt,
-        Action<CustomerAddressChangedEvent, int?> append, ref int? version)
-        => UpdateAddress(cityId, address, updateBy, updateAt, append, ref version, out _);
+        Action<CustomerAddressChangedEvent> append)
+        => UpdateAddress(cityId, address, updateBy, updateAt, append, out _);
     public Customer UpdateRole(CustomerRole? role, AppUserId updateBy, DateTimeOffset? updateAt,
-        Action<CustomerRoleChangedEvent, int?> append, ref int? version)
-        => UpdateRole(role, updateBy, updateAt, append, ref version, out _);
+        Action<CustomerRoleChangedEvent> append)
+        => UpdateRole(role, updateBy, updateAt, append, out _);
     public Customer AddOrders(HashSet<Order>? orders, AppUserId updateBy, DateTimeOffset? updateAt, 
-        Action<CustomerOrderAddedEvent, int?> append, ref int? version)
-        => AddOrders(orders, updateBy, updateAt, append, ref version, out _);
+        Action<CustomerOrderAddedEvent> append)
+        => AddOrders(orders, updateBy, updateAt, append, out _);
     public Customer RemoveOrders(HashSet<Order>? orders, AppUserId updateBy, DateTimeOffset? updateAt, 
-        Action<CustomerOrderRemovedEvent, int?> append, ref int? version)
-        => RemoveOrders(orders, updateBy, updateAt, append, ref version, out _);
+        Action<CustomerOrderRemovedEvent> append)
+        => RemoveOrders(orders, updateBy, updateAt, append, out _);
     public Customer AddProduct(ProductId productId, AppUserId updateBy, DateTimeOffset? updateAt,
-        Action<CustomerProductAddedEvent, int?> append, ref int? version)
-        => AddProduct(productId, updateBy, updateAt, append, ref version, out _);
+        Action<CustomerProductAddedEvent> append)
+        => AddProduct(productId, updateBy, updateAt, append, out _);
     public Customer RemoveProduct(ProductId productId, AppUserId updateBy, DateTimeOffset? updateAt,
-        Action<CustomerProductRemovedEvent, int?> append, ref int? version)
-        => RemoveProduct(productId, updateBy, updateAt, append, ref version, out _);
+        Action<CustomerProductRemovedEvent> append)
+        => RemoveProduct(productId, updateBy, updateAt, append, out _);
 
     public Customer SetProductIds(HashSet<ProductId> productIds)
     {

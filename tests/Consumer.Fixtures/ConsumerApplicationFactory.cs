@@ -69,7 +69,7 @@ public class ConsumerApplicationFactory<Program> : WebApplicationFactory<Program
                         storeOptions.Projections.Snapshot<Product>(SnapshotLifecycle.Inline);
                     })
                     .InitializeWith(new InitialData(InitialDatasets.InitialData))
-                    .UseDirtyTrackedSessions()
+                    .UseLightweightSessions()
                     .AddAsyncDaemon(DaemonMode.Solo);
                 
                 services.Configure<JsonOptions>(o => o.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));

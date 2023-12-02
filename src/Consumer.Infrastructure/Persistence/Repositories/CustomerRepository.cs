@@ -1,7 +1,6 @@
 ﻿using System.Linq.Expressions;
 using Marten;
 using Marten.Linq;
-using Marten.Pagination;
 using Consumer.Application.Common.Interfaces.Persistence;
 using Consumer.Domain.Common.ValueObjects;
 using Consumer.Domain.Customers;
@@ -10,6 +9,7 @@ using Consumer.Domain.Customers.ValueObjects;
 using Consumer.Domain.Products;
 using Consumer.Domain.Products.ValueObjects;
 using Consumer.Infrastructure.Persistence.Extensions;
+using Marten.Events.CodeGeneration;
 
 namespace Consumer.Infrastructure.Persistence.Repositories;
 
@@ -25,11 +25,8 @@ public class CustomerRepository : ICustomerRepository
     public class CheckByIdQuery : ICompiledQuery<Customer, bool>
     {
         public string Id { get; init; } = string.Empty;
-        
-        public Expression<Func<IMartenQueryable<Customer>, bool>> QueryIs()
-        {
-            return q => q.Any(c => c.Id.Value == Id);
-        }
+        public Expression<Func<IMartenQueryable<Customer>, bool>> QueryIs() => query 
+            => query.Any(c => c.Id.Value == Id);
     }
 
     public async Task<bool> CheckByIdAsync(CustomerId id, CancellationToken ct = default)
@@ -40,28 +37,26 @@ public class CustomerRepository : ICustomerRepository
     public class ByIdQuery : ICompiledQuery<Customer, Customer?>
     {
         public string Id { get; init; } = string.Empty;
-        
-        public Expression<Func<IMartenQueryable<Customer>, Customer?>> QueryIs()
-        {
-            return q => q.FirstOrDefault(c => c.Id.Value == Id);
-        }
+        public Expression<Func<IMartenQueryable<Customer>, Customer?>> QueryIs() => query 
+            => query.FirstOrDefault(c => c.Id.Value == Id);
     }
     
     public async Task<Customer?> ByIdAsync(CustomerId id, CancellationToken ct = default)
     {
         return await _session.QueryAsync(new ByIdQuery { Id = id.Value }, ct);
     }
+    
+    public async Task<Customer?> ByStreamIdAsync(CustomerId id, CancellationToken ct = default)
+    {
+        return await _session.Events.AggregateStreamAsync<Customer>(id.Value, token: ct);
+    }
 
     public class ByDataQuery : ICompiledQuery<Customer, Customer?>
     {
         public string FullName { get; init; } = string.Empty;
         public string PhoneNumber { get; init; } = string.Empty;
-        
-        public Expression<Func<IMartenQueryable<Customer>, Customer?>> QueryIs()
-        {
-            return q => q
-                .FirstOrDefault(c => c.FullName == FullName && c.PhoneNumber == PhoneNumber);
-        }
+        public Expression<Func<IMartenQueryable<Customer>, Customer?>> QueryIs() => query 
+            => query.FirstOrDefault(c => c.FullName == FullName && c.PhoneNumber == PhoneNumber);
     }
     
     public async Task<Customer?> ByDataAsync(string fullName, string phoneNumber, CancellationToken ct = default)
@@ -97,28 +92,53 @@ public class CustomerRepository : ICustomerRepository
     
     public class ByPageQuery : ICompiledListQuery<Customer>
     {
-        public Expression<Func<IMartenQueryable<Customer>, IEnumerable<Customer>>> QueryIs()
-        {
-            return q => q.Where(x => !x.IsDeleted)
+        [MartenIgnore]
+        public int PageNumber { get; init; }
+        public int PageSize { get; init; }
+        public int SkipSize => PageSize * (PageNumber - 1);
+        public Expression<Func<IMartenQueryable<Customer>, IEnumerable<Customer>>> QueryIs() => query 
+            => query.Where(x => !x.IsDeleted)
                 .OrderByDescending(x => x.CreatedAt)
-                .ThenByDescending(x => x.LastModifiedAt);
-        }
+                .ThenByDescending(x => x.LastModifiedAt)
+                .Skip(SkipSize)
+                .Take(PageSize);
+        public QueryStatistics Statistics { get; } = new();
     }
     
     public class ByCentrePageQuery : ICompiledListQuery<Customer>
     {
+        [MartenIgnore]
+        public int PageNumber { get; init; }
+        public int PageSize { get; init; }
         public Guid CentreId { get; init; }
-
-        public Expression<Func<IMartenQueryable<Customer>, IEnumerable<Customer>>> QueryIs()
-        {
-            return q => q.Where(x => !x.IsDeleted 
-                                     && x.Orders.Any(o => o.CentreId.Value == CentreId))
+        public int SkipSize => PageSize * (PageNumber - 1);
+        public Expression<Func<IMartenQueryable<Customer>, IEnumerable<Customer>>> QueryIs() => query 
+            => query.Where(x => !x.IsDeleted && x.Orders.Any(o => o.CentreId.Value == CentreId))
+                .OrderByDescending(x => x.CreatedAt)
+                .ThenByDescending(x => x.LastModifiedAt)
+                .Skip(SkipSize)
+                .Take(PageSize);
+        public QueryStatistics Statistics { get; } = new();
+    }
+    
+    public class NextPageQuery : ICompiledListQuery<Customer>
+    {
+        public Expression<Func<IMartenQueryable<Customer>, IEnumerable<Customer>>> QueryIs() => query 
+            => query.Where(x => !x.IsDeleted)
                 .OrderByDescending(x => x.CreatedAt)
                 .ThenByDescending(x => x.LastModifiedAt);
-        }
+    }
+    
+    public class NextCentrePageQuery : ICompiledListQuery<Customer>
+    {
+        public Guid CentreId { get; init; }
+        public Expression<Func<IMartenQueryable<Customer>, IEnumerable<Customer>>> QueryIs() => query 
+            => query.Where(x => !x.IsDeleted && x.Orders.Any(o => o.CentreId.Value == CentreId))
+                .OrderByDescending(x => x.CreatedAt)
+                .ThenByDescending(x => x.LastModifiedAt);
     }
 
-    public async Task<(List<Customer>, long)> ByPageAsync(int pageSize, int pageIndex, bool? nextPage, CustomerId? keyId, 
+    public async Task<(List<Customer>, long)> ByPageAsync(int pageSize, int pageNumber, bool? nextPage, CustomerId? keyId, 
         CentreId? centreId, CancellationToken ct = default)
     {
         List<Customer> customers;
@@ -126,28 +146,28 @@ public class CustomerRepository : ICustomerRepository
 
         if (!nextPage.HasValue || keyId is null || !await CheckByIdAsync(keyId, ct))
         {
-            var result = await _session.Query<Customer>()
-                .Where(centreId is null
-                    ? c => !c.IsDeleted
-                    : c => !c.IsDeleted && c.Orders.Any(o => o.CentreId.Value == centreId.Value))
-                .OrderByDescending(c => c.CreatedAt)
-                .ThenByDescending(c => c.LastModifiedAt)
-                .ToPagedListAsync(pageIndex, pageSize, token: ct);
-
-            customers = result.ToList();
-            totalCount = result.TotalItemCount;
+            if (centreId is null)
+            {
+                var query = new ByPageQuery { PageNumber = pageNumber, PageSize = pageSize };
+                customers = (await _session.QueryAsync(query, ct)).ToList();
+                totalCount = query.Statistics.TotalResults;
+            }
+            else
+            {
+                var query = new ByCentrePageQuery { PageNumber = pageNumber, PageSize = pageSize, CentreId = centreId.Value };
+                customers = (await _session.QueryAsync(query, ct)).ToList();
+                totalCount = query.Statistics.TotalResults;
+            }
         }
         else
         {
             var keyRecord = await ByIdAsync(keyId, ct);
+            var result = centreId is null
+                ? (await _session.QueryAsync(new NextPageQuery(), ct)).ToList()
+                : (await _session.QueryAsync(new NextCentrePageQuery { CentreId = centreId.Value }, ct)).ToList();
             
             if (nextPage == true)
             {
-                var result = centreId is null
-                    ? (await _session.QueryAsync(new ByPageQuery(), ct)).ToList()
-                    : (await _session.QueryAsync(new ByCentrePageQuery { CentreId = centreId.Value }, ct)).ToList();
-
-                totalCount = result.Count;
                 customers = result
                     .SkipWhile(c => c.Id != keyRecord!.Id)
                     .Where(c => c.Id != keyRecord!.Id)
@@ -156,11 +176,7 @@ public class CustomerRepository : ICustomerRepository
             }
             else
             {
-                var result = centreId is null
-                    ? (await _session.QueryAsync(new ByPageQuery(), ct)).Reverse().ToList()
-                    : (await _session.QueryAsync(new ByCentrePageQuery { CentreId = centreId.Value }, ct)).Reverse().ToList();
-
-                totalCount = result.Count;
+                result.Reverse();
                 customers = result
                     .SkipWhile(c => c.Id != keyRecord!.Id)
                     .Where(c => c.Id != keyRecord!.Id)
@@ -168,15 +184,17 @@ public class CustomerRepository : ICustomerRepository
                     .Reverse()
                     .ToList();
             }
+            
+            totalCount = result.Count;
         }
         
         return (customers, totalCount);
     }
 
-    public async Task<(List<Customer>, long)> ByPageDetailAsync(int pageSize, int pageIndex, bool? nextPage, 
+    public async Task<(List<Customer>, long)> ByPageDetailAsync(int pageSize, int pageNumber, bool? nextPage, 
         CustomerId? keyId, CentreId? centreId, CancellationToken ct = default)
     {
-        var (customers, totalCount) = await ByPageAsync(pageSize, pageIndex, nextPage, keyId, centreId, ct);
+        var (customers, totalCount) = await ByPageAsync(pageSize, pageNumber, nextPage, keyId, centreId, ct);
 
         var productIds = customers.SelectMany(c => c.ProductIds).Select(id => id.Value);
         var products = (await _session.LoadManyAsync<Product>(ct, productIds)).ToList();
@@ -186,25 +204,20 @@ public class CustomerRepository : ICustomerRepository
 
     public class ListQuery : ICompiledListQuery<Customer>
     {
-        public Expression<Func<IMartenQueryable<Customer>, IEnumerable<Customer>>> QueryIs()
-        {
-            return q => q.Where(x => !x.IsDeleted)
+        public Expression<Func<IMartenQueryable<Customer>, IEnumerable<Customer>>> QueryIs() => query 
+            => query.Where(x => !x.IsDeleted)
                 .OrderByDescending(x => x.CreatedAt)
                 .ThenByDescending(x => x.LastModifiedAt);
-        }
     }
     
     public class ByCentreIdQuery : ICompiledListQuery<Customer>
     {
         public Guid CentreId { get; init; }
-        
-        public Expression<Func<IMartenQueryable<Customer>, IEnumerable<Customer>>> QueryIs()
-        {
-            return q => q.Where(x => !x.IsDeleted 
-                                     && x.Orders.Any(o => o.CentreId.Value == CentreId))
+        public Expression<Func<IMartenQueryable<Customer>, IEnumerable<Customer>>> QueryIs() => query
+             => query.Where(x => !x.IsDeleted 
+                                         && x.Orders.Any(o => o.CentreId.Value == CentreId))
                 .OrderByDescending(x => x.CreatedAt)
                 .ThenByDescending(x => x.LastModifiedAt);
-        }
     }
     
     public async Task<List<Customer>> ListAsync(CentreId? centreId = null, CancellationToken ct = default)
@@ -218,25 +231,20 @@ public class CustomerRepository : ICustomerRepository
     
     public class ListProductsQuery : ICompiledListQuery<Product>
     {
-        public Expression<Func<IMartenQueryable<Product>, IEnumerable<Product>>> QueryIs()
-        {
-            return q => q.Where(x => !x.IsDeleted)
+        public Expression<Func<IMartenQueryable<Product>, IEnumerable<Product>>> QueryIs() => query 
+            => query.Where(x => !x.IsDeleted)
                 .OrderByDescending(x => x.CreatedAt)
                 .ThenByDescending(x => x.LastModifiedAt);
-        }
     }
     
     public class ByCentreIdProductsQuery : ICompiledListQuery<Product>
     {
         public Guid CentreId { get; init; }
-        
-        public Expression<Func<IMartenQueryable<Product>, IEnumerable<Product>>> QueryIs()
-        {
-            return q => q.Where(x => !x.IsDeleted 
-                                     && x.Orders.Any(o => o.CentreId.Value == CentreId))
+        public Expression<Func<IMartenQueryable<Product>, IEnumerable<Product>>> QueryIs() => query
+             => query.Where(x => !x.IsDeleted 
+                                         && x.Orders.Any(o => o.CentreId.Value == CentreId))
                 .OrderByDescending(x => x.CreatedAt)
                 .ThenByDescending(x => x.LastModifiedAt);
-        }
     }
 
     public async Task<List<Customer>> ListDetailAsync(CentreId? centreId = null, CancellationToken ct = default)
@@ -262,19 +270,10 @@ public class CustomerRepository : ICustomerRepository
         return (await _session.LoadAsync<Customer>(customerId, ct))!;
     }
 
-    public void Append(CustomerEvent customerEvent, int? version = null)
+    public void Append(CustomerEvent customerEvent)
     {
         var customerId = customerEvent.CustomerId.Value;
-        
-        if (version.HasValue)
-        {
-            _session.Events.WriteToAggregate<Customer>(customerId, version.Value, stream
-                => stream.AppendOne(customerEvent));
-        }
-        else
-        {
-            _session.Events.Append(customerId, customerEvent);
-        }
+        _session.Events.Append(customerId, customerEvent);
     }
 
     public async Task SaveChangesAsync(CancellationToken ct = default)

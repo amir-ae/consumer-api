@@ -15,11 +15,8 @@ builder.Services
     .AddApplication()
     .AddInfrastructure(builder.Configuration);
 
-Log.Logger = new LoggerConfiguration()
-    .ReadFrom.Configuration(builder.Configuration)
-    .CreateLogger();
-
-builder.Host.UseSerilog();
+builder.Host.UseSerilog((context, config) 
+    => config.ReadFrom.Configuration(context.Configuration));
 
 var app = builder.Build();
 

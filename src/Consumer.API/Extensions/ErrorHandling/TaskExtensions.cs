@@ -13,7 +13,7 @@ public static class TaskExtensions
                 {
                     if (t.IsCanceled)
                     {
-                        return Error.Conflict("ClientClosedRequest", 
+                        return Error.Conflict(nameof(StatusCodes.Status499ClientClosedRequest), 
                             "The client has closed the connection while the server is still processing the request.");
                     }
                     return t.Result;

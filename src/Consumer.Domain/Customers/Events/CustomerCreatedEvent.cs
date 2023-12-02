@@ -25,11 +25,11 @@ public sealed record CustomerCreatedEvent : CustomerEvent
         DateTimeOffset? createdAt = null) : base(
         customerId)
     {
-        if (!string.IsNullOrEmpty(fullName))
+        if (!string.IsNullOrWhiteSpace(fullName))
         {
             FullName = fullName;
         }
-        else if (string.IsNullOrEmpty(middleName) && string.IsNullOrEmpty(lastName))
+        else if (string.IsNullOrWhiteSpace(middleName) && string.IsNullOrWhiteSpace(lastName))
         {
             FullName = firstName;
         }

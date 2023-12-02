@@ -32,7 +32,7 @@ public class LoadDataAttribute : DataAttribute
 
         var fileData = File.ReadAllText(_fileName);
 
-        if (string.IsNullOrEmpty(_section)) return
+        if (string.IsNullOrWhiteSpace(_section)) return
             JsonConvert.DeserializeObject<List<string[]>>(fileData, settings)!;
 
         var allData = JToken.Parse(fileData);

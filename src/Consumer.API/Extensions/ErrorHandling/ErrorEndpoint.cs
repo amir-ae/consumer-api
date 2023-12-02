@@ -13,7 +13,7 @@ public static class ErrorEndpoint
         {
             Exception? exception = httpContext.Features.Get<IExceptionHandlerFeature>()?.Error;
 
-            if (!string.IsNullOrEmpty(exception?.Message))
+            if (!string.IsNullOrWhiteSpace(exception?.Message))
             {
                 Log.Error(exception.Message);
             }

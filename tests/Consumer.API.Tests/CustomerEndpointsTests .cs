@@ -67,17 +67,17 @@ public class CustomerEndpointsTests : IntegrationTest
     
     [Theory, TestPriority(4)]
     [InlineData(1, 1)]
-    public async Task get_should_return_paginated_customers(int pageIndex, int pageSize)
+    public async Task get_should_return_paginated_customers(int pageNumber, int pageSize)
     {
         var client = _factory.CreateClient();
 
-        var response = await client.GetAsync(Customers.ByPage.Uri() + $"?pageIndex={pageIndex}&pageSize={pageSize}");
+        var response = await client.GetAsync(Customers.ByPage.Uri() + $"?pageNumber={pageNumber}&pageSize={pageSize}");
         
         response.EnsureSuccessStatusCode();
         var content = await response.Content.ReadAsStringAsync();
         var result = JsonConvert.DeserializeObject<PaginatedList<CustomerResponse>>(content);
         result.ShouldNotBeNull();
-        result.PageIndex.ShouldBe(pageIndex);
+        result.PageNumber.ShouldBe(pageNumber);
         result.PageSize.ShouldBe(pageSize);
         result.Data.Count().ShouldBe(pageSize);
     }
@@ -156,10 +156,9 @@ public class CustomerEndpointsTests : IntegrationTest
 
         var version = 2;
         var eTag = new EntityTagHeaderValue('\"' + version.ToString() + '\"');
-        client.DefaultRequestHeaders.TryAddWithoutValidation("If-Match", eTag.ToString());
-        await client.PatchAsJsonAsync(Customers.Update.Uri(customerId.Value), request);
-        var response = await client.GetAsync(Customers.ById.Uri(customerId.Value));
-        
+        client.DefaultRequestHeaders.TryAddWithoutValidation(HeaderNames.IfMatch, eTag.ToString());
+        var response = await client.PatchAsJsonAsync(Customers.Update.Uri(customerId.Value), request);
+
         response.EnsureSuccessStatusCode();
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         response.Headers.Location?.ToString().ShouldContain(Customers.Prefix);

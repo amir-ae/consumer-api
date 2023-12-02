@@ -37,31 +37,33 @@ public sealed class UpdateCustomerCommandHandler : IRequestHandler<UpdateCustome
         var customer = await _customerRepository.ByIdAsync(customerId, ct);
         if (customer is null) return Error.NotFound(
             nameof(CustomerId), $"{nameof(Customer)} with id {customerId} is not found.");
+        
+        if (version.HasValue && version != customer.Version) return Error.Conflict(
+            nameof(customer.Version), $"{nameof(customer.Version)} mismatch.");
 
-        Action<CustomerEvent, int?> append = _customerRepository.Append;
+        Action<CustomerEvent> append = _customerRepository.Append;
         CustomerUpdateMessage? updateMessage = null;
 
-        customer = customer.UpdateName(firstName, middleName, lastName, updateBy, updateAt, append, ref version, 
-            out bool nameUpdated);
+        customer = customer.UpdateName(firstName, middleName, lastName, updateBy, updateAt, append, out bool nameUpdated);
         
         if (nameUpdated)
         {
             updateMessage = new CustomerUpdateMessage(customerId.Value, customer.FullName, updateBy.Value, updateAt);
         }
 
-        customer = customer.UpdatePhoneNumber(phoneNumber, updateBy, updateAt, append, ref version);
+        customer = customer.UpdatePhoneNumber(phoneNumber, updateBy, updateAt, append);
 
-        customer = customer.UpdateAddress(cityId, address, updateBy, updateAt, append, ref version);
+        customer = customer.UpdateAddress(cityId, address, updateBy, updateAt, append);
 
-        customer = customer.AddOrders(orders, updateBy, updateAt, append, ref version);
+        customer = customer.AddOrders(orders, updateBy, updateAt, append);
 
         if (!onCreate)
         {
-            customer = customer.RemoveOrders(orders, updateBy, updateAt, append, ref version);
+            customer = customer.RemoveOrders(orders, updateBy, updateAt, append);
         }
         
         bool roleChanged = false;
-        customer = customer.UpdateRole(role, updateBy, updateAt, append, ref version, out bool roleUpdated);
+        customer = customer.UpdateRole(role, updateBy, updateAt, append, out bool roleUpdated);
         if (roleUpdated)
         {
             roleChanged = true;
@@ -163,6 +165,10 @@ public sealed class UpdateCustomerCommandHandler : IRequestHandler<UpdateCustome
         
         await _customerRepository.SaveChangesAsync(ct);
 
-        return customer;
+        var result = await _customerRepository.ByStreamIdAsync(customerId, ct);
+        if (result is null) return Error.Unexpected(
+            nameof(CustomerId), $"{nameof(Customer)} stream with id {customerId} is not found.");
+
+        return result;
     }
 }

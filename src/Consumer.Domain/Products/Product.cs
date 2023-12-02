@@ -146,9 +146,9 @@ public sealed record Product : AggregateRoot<ProductId, string>
     }
 
     public Product UpdateBrand(string? brand, AppUserId updateBy, DateTimeOffset? updateAt,
-        Action<ProductBrandChangedEvent, int?> append, ref int? version, out bool shouldUpdate)
+        Action<ProductBrandChangedEvent> append, out bool shouldUpdate)
     {
-        shouldUpdate = !string.IsNullOrEmpty(brand) && brand != Brand;
+        shouldUpdate = !string.IsNullOrWhiteSpace(brand) && brand != Brand;
         if (!shouldUpdate) return this;
         
         var @event = new ProductBrandChangedEvent(
@@ -157,14 +157,14 @@ public sealed record Product : AggregateRoot<ProductId, string>
             updateBy,
             updateAt);
         
-        append(@event, version++);
+        append(@event);
         return Apply(@event);
     }
     
     public Product UpdateModel(string? model, AppUserId updateBy, DateTimeOffset? updateAt,
-        Action<ProductModelChangedEvent, int?> append, ref int? version, out bool shouldUpdate)
+        Action<ProductModelChangedEvent> append, out bool shouldUpdate)
     {
-        shouldUpdate = !string.IsNullOrEmpty(model) && model != Model;
+        shouldUpdate = !string.IsNullOrWhiteSpace(model) && model != Model;
         if (!shouldUpdate) return this;
         
         var @event = new ProductModelChangedEvent(
@@ -173,14 +173,14 @@ public sealed record Product : AggregateRoot<ProductId, string>
             updateBy,
             updateAt);
         
-        append(@event, version++);
+        append(@event);
         return Apply(@event);
     }
 
     public Product UpdateDeviceType(string? deviceType, AppUserId updateBy, DateTimeOffset? updateAt,
-        Action<ProductDeviceTypeChangedEvent, int?> append, ref int? version, out bool shouldUpdate)
+        Action<ProductDeviceTypeChangedEvent> append, out bool shouldUpdate)
     {
-        shouldUpdate = !string.IsNullOrEmpty(deviceType) && deviceType != DeviceType;
+        shouldUpdate = !string.IsNullOrWhiteSpace(deviceType) && deviceType != DeviceType;
         if (!shouldUpdate) return this;
         
         var @event = new ProductDeviceTypeChangedEvent(
@@ -189,15 +189,15 @@ public sealed record Product : AggregateRoot<ProductId, string>
             updateBy,
             updateAt);
         
-        append(@event, version++);
+        append(@event);
         return Apply(@event);
     }
     
     public Product UpdatePanel(string? panelModel, string? panelSerialNumber, AppUserId updateBy, 
-        DateTimeOffset? updateAt, Action<ProductPanelChangedEvent, int?> append, ref int? version, out bool shouldUpdate)
+        DateTimeOffset? updateAt, Action<ProductPanelChangedEvent> append, out bool shouldUpdate)
     {
-        shouldUpdate = !string.IsNullOrEmpty(panelModel) && panelModel != PanelModel
-                           || !string.IsNullOrEmpty(panelSerialNumber) && panelSerialNumber != PanelSerialNumber;
+        shouldUpdate = !string.IsNullOrWhiteSpace(panelModel) && panelModel != PanelModel
+                           || !string.IsNullOrWhiteSpace(panelSerialNumber) && panelSerialNumber != PanelSerialNumber;
         
         if (!shouldUpdate) return this;
         
@@ -208,14 +208,14 @@ public sealed record Product : AggregateRoot<ProductId, string>
             updateBy,
             updateAt);
         
-        append(@event, version++);
+        append(@event);
         return Apply(@event);
     }
     
     public Product UpdateWarrantyCardNumber(string? warrantyCardNumber, AppUserId updateBy, DateTimeOffset? updateAt, 
-        Action<ProductWarrantyCardNumberChangedEvent, int?> append, ref int? version, out bool shouldUpdate)
+        Action<ProductWarrantyCardNumberChangedEvent> append, out bool shouldUpdate)
     {
-        shouldUpdate = !string.IsNullOrEmpty(warrantyCardNumber) && warrantyCardNumber != WarrantyCardNumber;
+        shouldUpdate = !string.IsNullOrWhiteSpace(warrantyCardNumber) && warrantyCardNumber != WarrantyCardNumber;
         if (!shouldUpdate) return this;
         
         var @event = new ProductWarrantyCardNumberChangedEvent(
@@ -224,16 +224,15 @@ public sealed record Product : AggregateRoot<ProductId, string>
             updateBy,
             updateAt);
         
-        append(@event, version++);
+        append(@event);
         return Apply(@event);
     }
     
     public Product UpdatePurchaseData(DateTimeOffset? dateOfPurchase, string? invoiceNumber, decimal? purchasePrice, 
-        AppUserId updateBy, DateTimeOffset? updateAt, Action<ProductPurchaseDataChangedEvent, int?> append, 
-        ref int? version, out bool shouldUpdate)
+        AppUserId updateBy, DateTimeOffset? updateAt, Action<ProductPurchaseDataChangedEvent> append, out bool shouldUpdate)
     {
         shouldUpdate = dateOfPurchase is not null && dateOfPurchase != DateOfPurchase
-                       || !string.IsNullOrEmpty(invoiceNumber) && invoiceNumber != InvoiceNumber
+                       || !string.IsNullOrWhiteSpace(invoiceNumber) && invoiceNumber != InvoiceNumber
                        || purchasePrice is not null && purchasePrice != PurchasePrice;
         if (!shouldUpdate) return this;
         
@@ -245,17 +244,17 @@ public sealed record Product : AggregateRoot<ProductId, string>
             updateBy,
             updateAt);
         
-        append(@event, version++);
+        append(@event);
         return Apply(@event);
     }
     
     public Product UpdateUnrepairable(bool? isUnrepairable, DateTimeOffset? dateOfDemandForCompensation, 
         string? demanderFullName, AppUserId updateBy, DateTimeOffset? updateAt, 
-        Action<ProductUnrepairableEvent, int?> append, ref int? version, out bool shouldUpdate)
+        Action<ProductUnrepairableEvent> append, out bool shouldUpdate)
     {
         shouldUpdate = isUnrepairable is not null && isUnrepairable != IsUnrepairable
                        || dateOfDemandForCompensation is not null && dateOfDemandForCompensation != DateOfDemandForCompensation
-                       || !string.IsNullOrEmpty(demanderFullName) && demanderFullName != DemanderFullName;
+                       || !string.IsNullOrWhiteSpace(demanderFullName) && demanderFullName != DemanderFullName;
         if (!shouldUpdate) return this;
         
         var @event = new ProductUnrepairableEvent(
@@ -266,12 +265,12 @@ public sealed record Product : AggregateRoot<ProductId, string>
             updateBy,
             updateAt);
         
-        append(@event, version++);
+        append(@event);
         return Apply(@event);
     }
     
     public Product AddOrders(HashSet<Order>? orders, AppUserId updateBy, DateTimeOffset? updateAt, 
-        Action<ProductOrderAddedEvent, int?> append, ref int? version, out bool shouldUpdate)
+        Action<ProductOrderAddedEvent> append, out bool shouldUpdate)
     {
         shouldUpdate = orders is not null && !orders.SetEquals(Orders);
         if (!shouldUpdate) return this;
@@ -286,7 +285,7 @@ public sealed record Product : AggregateRoot<ProductId, string>
                 updateBy,
                 updateAt);
 
-            append(@event, version++);
+            append(@event);
             product = Apply(@event);
         }
 
@@ -294,7 +293,7 @@ public sealed record Product : AggregateRoot<ProductId, string>
     }
     
     public Product RemoveOrders(HashSet<Order>? orders, AppUserId updateBy, DateTimeOffset? updateAt, 
-        Action<ProductOrderRemovedEvent, int?> append, ref int? version, out bool shouldUpdate)
+        Action<ProductOrderRemovedEvent> append, out bool shouldUpdate)
     {
         shouldUpdate = orders is not null && !orders.SetEquals(Orders);
         if (!shouldUpdate) return this;
@@ -309,7 +308,7 @@ public sealed record Product : AggregateRoot<ProductId, string>
                 updateBy,
                 updateAt);
             
-            append(@event, version++);
+            append(@event);
             product = Apply(@event);
         }
         
@@ -317,7 +316,7 @@ public sealed record Product : AggregateRoot<ProductId, string>
     }
     
     public Product UpdateOwner(CustomerId ownerId, string? ownerName, AppUserId updateBy, DateTimeOffset? updateAt, 
-        Action<ProductOwnerChangedEvent, int?> append, ref int? version, out bool shouldUpdate)
+        Action<ProductOwnerChangedEvent> append, out bool shouldUpdate)
     {
         shouldUpdate = ownerId != OwnerId;
         if (!shouldUpdate) return this;
@@ -329,12 +328,12 @@ public sealed record Product : AggregateRoot<ProductId, string>
             updateBy,
             updateAt);
         
-        append(@event, version++);
+        append(@event);
         return Apply(@event);
     }
     
     public Product UpdateDealer(CustomerId dealerId, string? ownerName, AppUserId updateBy, DateTimeOffset? updateAt, 
-        Action<ProductDealerChangedEvent, int?> append, ref int? version, out bool shouldUpdate)
+        Action<ProductDealerChangedEvent> append, out bool shouldUpdate)
     {
         shouldUpdate = dealerId != DealerId;
         if (!shouldUpdate) return this;
@@ -346,84 +345,84 @@ public sealed record Product : AggregateRoot<ProductId, string>
             updateBy,
             updateAt);
         
-        append(@event, version++);
+        append(@event);
         return Apply(@event);
     }
     
-    public Product Activate(AppUserId activateBy, Action<ProductActivatedEvent, int?> append)
+    public Product Activate(AppUserId activateBy, Action<ProductActivatedEvent> append)
     {
         if (IsActive) return this;
         
         var @event = new ProductActivatedEvent(Id, activateBy);
         
-        append(@event, null);
+        append(@event);
         return Apply(@event);
     }
     
-    public Product Deactivate(AppUserId deactivateBy, Action<ProductDeactivatedEvent, int?> append)
+    public Product Deactivate(AppUserId deactivateBy, Action<ProductDeactivatedEvent> append)
     {
         if (!IsActive) return this;
         
         var @event = new ProductDeactivatedEvent(Id, deactivateBy);
         
-        append(@event, null);
+        append(@event);
         return Apply(@event);
     }
     
-    public Product Delete(AppUserId deleteBy, Action<ProductDeletedEvent, int?> append)
+    public Product Delete(AppUserId deleteBy, Action<ProductDeletedEvent> append)
     {
         if (IsDeleted) return this;
         
         var @event = new ProductDeletedEvent(Id, deleteBy);
         
-        append(@event, null);
+        append(@event);
         return Apply(@event);
     }
     
-    public Product Undelete(AppUserId undeleteBy, Action<ProductUndeletedEvent, int?> append)
+    public Product Undelete(AppUserId undeleteBy, Action<ProductUndeletedEvent> append)
     {
         if (!IsDeleted) return this;
         
         var @event = new ProductUndeletedEvent(Id, undeleteBy);
         
-        append(@event, null);
+        append(@event);
         return Apply(@event);
     }
 
     public Product UpdateBrand(string? brand, AppUserId updateBy, DateTimeOffset? updateAt, 
-        Action<ProductBrandChangedEvent, int?> append, ref int? version)
-        => UpdateBrand(brand, updateBy, updateAt, append, ref version, out _);
+        Action<ProductBrandChangedEvent> append)
+        => UpdateBrand(brand, updateBy, updateAt, append, out _);
     public Product UpdateModel(string? model, AppUserId updateBy, DateTimeOffset? updateAt,
-        Action<ProductModelChangedEvent, int?> append, ref int? version)
-        => UpdateModel(model, updateBy, updateAt, append, ref version, out _);
+        Action<ProductModelChangedEvent> append)
+        => UpdateModel(model, updateBy, updateAt, append, out _);
     public Product UpdateDeviceType(string? deviceType, AppUserId updateBy, DateTimeOffset? updateAt,
-        Action<ProductDeviceTypeChangedEvent, int?> append, ref int? version)
-        => UpdateDeviceType(deviceType, updateBy, updateAt, append, ref version, out _);
+        Action<ProductDeviceTypeChangedEvent> append)
+        => UpdateDeviceType(deviceType, updateBy, updateAt, append, out _);
     public Product UpdatePanel(string? panelModel, string? panelSerialNumber, AppUserId updateBy, 
-        DateTimeOffset? updateAt, Action<ProductPanelChangedEvent, int?> append, ref int? version)
-        => UpdatePanel(panelModel, panelSerialNumber, updateBy, updateAt, append, ref version, out _);
+        DateTimeOffset? updateAt, Action<ProductPanelChangedEvent> append)
+        => UpdatePanel(panelModel, panelSerialNumber, updateBy, updateAt, append, out _);
     public Product UpdateWarrantyCardNumber(string? warrantyCardNumber, AppUserId updateBy, DateTimeOffset? updateAt, 
-        Action<ProductWarrantyCardNumberChangedEvent, int?> append, ref int? version)
-        => UpdateWarrantyCardNumber(warrantyCardNumber, updateBy, updateAt, append, ref version, out _);
+        Action<ProductWarrantyCardNumberChangedEvent> append)
+        => UpdateWarrantyCardNumber(warrantyCardNumber, updateBy, updateAt, append, out _);
     public Product UpdatePurchaseData(DateTimeOffset? dateOfPurchase, string? invoiceNumber, decimal? purchasePrice, 
-        AppUserId updateBy, DateTimeOffset? updateAt, Action<ProductPurchaseDataChangedEvent, int?> append, ref int? version)
-        => UpdatePurchaseData(dateOfPurchase, invoiceNumber, purchasePrice, updateBy, updateAt, append, ref version, out _);
+        AppUserId updateBy, DateTimeOffset? updateAt, Action<ProductPurchaseDataChangedEvent> append)
+        => UpdatePurchaseData(dateOfPurchase, invoiceNumber, purchasePrice, updateBy, updateAt, append, out _);
     public Product UpdateUnrepairable(bool? isUnrepairable, DateTimeOffset? dateOfDemandForCompensation, 
         string? demanderFullName, AppUserId updateBy, DateTimeOffset? updateAt, 
-        Action<ProductUnrepairableEvent, int?> append, ref int? version) => UpdateUnrepairable(isUnrepairable, 
-        dateOfDemandForCompensation, demanderFullName, updateBy, updateAt, append, ref version, out _);
+        Action<ProductUnrepairableEvent> append) => UpdateUnrepairable(isUnrepairable, 
+        dateOfDemandForCompensation, demanderFullName, updateBy, updateAt, append, out _);
     public Product AddOrders(HashSet<Order>? orders, AppUserId updateBy, DateTimeOffset? updateAt, 
-        Action<ProductOrderAddedEvent, int?> append, ref int? version) 
-        => AddOrders(orders, updateBy, updateAt, append, ref version, out _);
+        Action<ProductOrderAddedEvent> append) 
+        => AddOrders(orders, updateBy, updateAt, append, out _);
     public Product RemoveOrders(HashSet<Order>? orders, AppUserId updateBy, DateTimeOffset? updateAt, 
-        Action<ProductOrderRemovedEvent, int?> append, ref int? version)
-        => RemoveOrders(orders, updateBy, updateAt, append, ref version, out _);
+        Action<ProductOrderRemovedEvent> append)
+        => RemoveOrders(orders, updateBy, updateAt, append, out _);
     public Product UpdateOwner(CustomerId ownerId, string? ownerName, AppUserId updateBy, DateTimeOffset? updateAt, 
-        Action<ProductOwnerChangedEvent, int?> append, ref int? version) 
-        => UpdateOwner(ownerId, ownerName, updateBy, updateAt, append, ref version, out _);
+        Action<ProductOwnerChangedEvent> append) 
+        => UpdateOwner(ownerId, ownerName, updateBy, updateAt, append, out _);
     public Product UpdateDealer(CustomerId dealerId, string? ownerName, AppUserId updateBy, DateTimeOffset? updateAt,
-        Action<ProductDealerChangedEvent, int?> append, ref int? version)
-        => UpdateDealer(dealerId, ownerName, updateBy, updateAt, append, ref version, out _);
+        Action<ProductDealerChangedEvent> append)
+        => UpdateDealer(dealerId, ownerName, updateBy, updateAt, append, out _);
     
     public Product AddOwner(Customer? owner)
     {

@@ -18,7 +18,7 @@ public class ProductRepositoryTests : IntegrationTest
         _sut = new ProductRepository(OpenSession());
     }
 
-    [Fact]
+    [Fact, TestPriority(1)]
     public async Task should_get_data()
     {
         var result = await _sut.ListAsync();
@@ -26,7 +26,7 @@ public class ProductRepositoryTests : IntegrationTest
         result.ShouldNotBeNull();
     }
     
-    [Theory]
+    [Theory, TestPriority(2)]
     [InlineData(2)]
     public async Task should_get_all_records(int count)
     {
@@ -36,7 +36,7 @@ public class ProductRepositoryTests : IntegrationTest
         result.Count.ShouldBe(count);
     }
     
-    [Theory]
+    [Theory, TestPriority(3)]
     [InlineData(2)]
     public async Task should_get_all_records_in_detail(int count)
     {
@@ -49,7 +49,7 @@ public class ProductRepositoryTests : IntegrationTest
         result.All(p => p.Owner != null).ShouldBeTrue();
     }
     
-    [Theory]
+    [Theory, TestPriority(4)]
     [InlineData("3")]
     public async Task should_not_return_deleted_records(string id)
     {
@@ -58,7 +58,7 @@ public class ProductRepositoryTests : IntegrationTest
         result.Any(x => x.Id == new ProductId(id)).ShouldBeFalse();
     }
     
-    [Theory]
+    [Theory, TestPriority(5)]
     [LoadData("product")]
     public async Task should_return_record_detail_by_order_id(Product product)
     {
@@ -71,7 +71,7 @@ public class ProductRepositoryTests : IntegrationTest
         result.Owner.ShouldNotBeNull();
     }
     
-    [Theory]
+    [Theory, TestPriority(6)]
     [LoadData("product")]
     public async Task should_return_records_detail_by_centre_id(Product product)
     {
@@ -85,7 +85,7 @@ public class ProductRepositoryTests : IntegrationTest
         result.All(p => p.Owner != null).ShouldBeTrue();
     }
     
-    [Theory]
+    [Theory, TestPriority(7)]
     [LoadData("product.Id")]
     public async Task should_return_record_by_id(ProductId id)
     {
@@ -95,7 +95,7 @@ public class ProductRepositoryTests : IntegrationTest
         result.Id.ShouldBe(id);
     }
 
-    [Theory]
+    [Theory, TestPriority(8)]
     [LoadData("product.Id")]
     public async Task should_return_record_detail_by_id(ProductId id)
     {
@@ -106,7 +106,7 @@ public class ProductRepositoryTests : IntegrationTest
         result.Owner.ShouldNotBeNull();
     }
 
-    [Fact]
+    [Fact, TestPriority(9)]
     public async Task should_return_null_with_id_not_present()
     {
         var productId = new ProductId(Guid.NewGuid().ToString());
@@ -115,7 +115,7 @@ public class ProductRepositoryTests : IntegrationTest
         result.ShouldBeNull();
     }
 
-    [Theory]
+    [Theory, TestPriority(10)]
     [LoadData("product.Id")]
     public async Task should_return_true_on_check_by_id(ProductId id)
     {
@@ -123,7 +123,7 @@ public class ProductRepositoryTests : IntegrationTest
         result.ShouldBeTrue();
     }
     
-    [Fact]
+    [Fact, TestPriority(11)]
     public async Task should_return_false_on_check_by_id_not_present()
     {
         var productId = new ProductId(Guid.NewGuid().ToString());
@@ -131,7 +131,7 @@ public class ProductRepositoryTests : IntegrationTest
         result.ShouldBeFalse();
     }
 
-    [Theory]
+    [Theory, TestPriority(12)]
     [LoadData("product")]
     public async Task should_add_new_product(Product product)
     {
@@ -152,7 +152,7 @@ public class ProductRepositoryTests : IntegrationTest
         result.Id.ShouldBe(productId);
     }
     
-    [Theory]
+    [Theory, TestPriority(13)]
     [LoadData("product")]
     public async Task should_update_a_product(Product product)
     {
@@ -172,7 +172,7 @@ public class ProductRepositoryTests : IntegrationTest
         result.Brand.ShouldBe(product.Brand);
     }
     
-    [Theory]
+    [Theory, TestPriority(14)]
     [LoadData("product")]
     public async Task should_return_record_events_by_id(Product product)
     {
@@ -202,7 +202,7 @@ public class ProductRepositoryTests : IntegrationTest
         result.ProductOwnerChangedEvents.Last().OwnerId.ShouldBe(product.OwnerId);
     }
     
-    [Theory]
+    [Theory, TestPriority(15)]
     [InlineData("C")]
     public async Task should_activate_product(string id)
     {
@@ -220,7 +220,7 @@ public class ProductRepositoryTests : IntegrationTest
         result.IsActive.ShouldBe(true);
     }
     
-    [Theory]
+    [Theory, TestPriority(16)]
     [InlineData("C")]
     public async Task should_deactivate_product(string id)
     {
@@ -238,7 +238,7 @@ public class ProductRepositoryTests : IntegrationTest
         result.IsActive.ShouldBe(false);
     }
     
-    [Theory]
+    [Theory, TestPriority(17)]
     [InlineData("B")]
     public async Task should_delete_product(string id)
     {

@@ -65,17 +65,17 @@ public class ProductEndpointsTests : IntegrationTest
     
     [Theory, TestPriority(4)]
     [InlineData(1, 1)]
-    public async Task get_should_return_paginated_products(int pageIndex, int pageSize)
+    public async Task get_should_return_paginated_products(int pageNumber, int pageSize)
     {
         var client = _factory.CreateClient();
 
-        var response = await client.GetAsync(Products.ByPage.Uri() + $"?pageIndex={pageIndex}&pageSize={pageSize}");
+        var response = await client.GetAsync(Products.ByPage.Uri() + $"?pageNumber={pageNumber}&pageSize={pageSize}");
         
         response.EnsureSuccessStatusCode();
         var content = await response.Content.ReadAsStringAsync();
         var result = JsonConvert.DeserializeObject<PaginatedList<ProductResponse>>(content);
         result.ShouldNotBeNull();
-        result.PageIndex.ShouldBe(pageIndex);
+        result.PageNumber.ShouldBe(pageNumber);
         result.PageSize.ShouldBe(pageSize);
         result.Data.Count().ShouldBe(pageSize);
     }

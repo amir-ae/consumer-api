@@ -12,11 +12,11 @@ public static class CachingExtensions
         services.AddOutputCache(options =>
         {
             options.AddBasePolicy(builder => builder
-                .With(c => c.HttpContext.Request.Path.StartsWithSegments(Routes.Customers.Prefix))
-                .Tag(nameof(Routes.Customers)).Expire(TimeSpan.FromMinutes(1)));
+                .With(c => c.HttpContext.Request.Path.StartsWithSegments(Routes.Customers.List.Uri()))
+                .Tag(nameof(Routes.Customers)).Expire(TimeSpan.FromSeconds(30)));
             options.AddBasePolicy(builder => builder
-                .With(c => c.HttpContext.Request.Path.StartsWithSegments(Routes.Products.Prefix))
-                .Tag(nameof(Routes.Products)).Expire(TimeSpan.FromMinutes(1)));
+                .With(c => c.HttpContext.Request.Path.StartsWithSegments(Routes.Products.List.Uri()))
+                .Tag(nameof(Routes.Products)).Expire(TimeSpan.FromSeconds(30)));
             options.AddPolicy("Auth", CacheAuthenticatedRequestsPolicy.Instance);
         });
         return services;

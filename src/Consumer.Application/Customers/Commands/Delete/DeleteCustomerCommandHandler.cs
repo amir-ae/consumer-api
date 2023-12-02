@@ -23,10 +23,14 @@ public sealed class DeleteCustomerCommandHandler : IRequestHandler<DeleteCustome
         if (customer is null) return Error.NotFound(
             nameof(CustomerId), $"{nameof(Customer)} with id {customerId} is not found.");
 
-        customer = customer.Delete(deleteBy, _customerRepository.Append);
+        customer.Delete(deleteBy, _customerRepository.Append);
         
         await _customerRepository.SaveChangesAsync(ct);
 
-        return customer;
+        var result = await _customerRepository.ByStreamIdAsync(customerId, ct);
+        if (result is null) return Error.Unexpected(
+            nameof(CustomerId), $"{nameof(Customer)} stream with id {customerId} is not found.");
+
+        return result;
     }
 }

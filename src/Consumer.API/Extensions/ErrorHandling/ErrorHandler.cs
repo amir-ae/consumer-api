@@ -25,13 +25,15 @@ public class ErrorHandler : IErrorHandler
         var statusCode = error.Type switch
         {
             ErrorType.Unauthorized => StatusCodes.Status401Unauthorized,
+            ErrorType.Forbidden => StatusCodes.Status403Forbidden,
             ErrorType.NotFound => StatusCodes.Status404NotFound,
-            ErrorType.Conflict => error.Code == "ClientClosedRequest" 
+            ErrorType.Conflict => error.Code == nameof(StatusCodes.Status499ClientClosedRequest) 
                 ? StatusCodes.Status499ClientClosedRequest : StatusCodes.Status409Conflict,
-            _ => StatusCodes.Status500InternalServerError
+            _ => error.Code == nameof(StatusCodes.Status304NotModified) 
+                ? StatusCodes.Status304NotModified : StatusCodes.Status500InternalServerError
         };
 
-        if (!string.IsNullOrEmpty(error.Description))
+        if (!string.IsNullOrWhiteSpace(error.Description))
         {
             Log.Error(error.Description);
         }

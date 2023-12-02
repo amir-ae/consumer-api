@@ -24,7 +24,7 @@ public class ApiKeyEndpointFilter : IEndpointFilter
 
         if (!apiKey.Equals(extractedApiKey))
         {
-            return new UnauthorizedHttpResult("Invalid API Key");
+            return new ForbiddenHttpResult("Invalid API Key");
         };
 
         return await next(context);

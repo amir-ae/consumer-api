@@ -18,7 +18,7 @@ public class CustomerRepositoryTests : IntegrationTest
         _sut = new CustomerRepository(OpenSession());
     }
 
-    [Fact]
+    [Fact, TestPriority(1)]
     public async Task should_get_data()
     {
         var result = await _sut.ListAsync();
@@ -26,7 +26,7 @@ public class CustomerRepositoryTests : IntegrationTest
         result.ShouldNotBeNull();
     }
     
-    [Theory]
+    [Theory, TestPriority(2)]
     [InlineData(2)]
     public async Task should_get_all_records(int count)
     {
@@ -36,7 +36,7 @@ public class CustomerRepositoryTests : IntegrationTest
         result.Count.ShouldBe(count);
     }
     
-    [Theory]
+    [Theory, TestPriority(3)]
     [InlineData(2)]
     public async Task should_get_all_records_in_detail(int count)
     {
@@ -47,7 +47,7 @@ public class CustomerRepositoryTests : IntegrationTest
         result.All(c => c.Products?.FirstOrDefault() != null).ShouldBeTrue();
     }
     
-    [Theory]
+    [Theory, TestPriority(4)]
     [InlineData("3")]
     public async Task should_not_return_deleted_records(string id)
     {
@@ -56,7 +56,7 @@ public class CustomerRepositoryTests : IntegrationTest
         result.Any(x => x.Id == new CustomerId(id)).ShouldBeFalse();
     }
     
-    [Theory]
+    [Theory, TestPriority(5)]
     [InlineData("1", "2", "3")]
     public async Task should_return_records_detail_by_ids(string id1, string id2, string id3)
     {
@@ -69,7 +69,7 @@ public class CustomerRepositoryTests : IntegrationTest
         result.Count.ShouldBe(3);
     }
 
-    [Theory]
+    [Theory, TestPriority(6)]
     [LoadData("customer.Id")]
     public async Task should_return_record_by_id(CustomerId id)
     {
@@ -79,7 +79,7 @@ public class CustomerRepositoryTests : IntegrationTest
         result.Id.ShouldBe(id);
     }
     
-    [Theory]
+    [Theory, TestPriority(7)]
     [LoadData("customer.Id")]
     public async Task should_return_record_detail_by_id(CustomerId id)
     {
@@ -90,7 +90,7 @@ public class CustomerRepositoryTests : IntegrationTest
         result.Products?.FirstOrDefault().ShouldNotBeNull();
     }
 
-    [Theory]
+    [Theory, TestPriority(8)]
     [LoadData("customer")]
     public async Task should_return_record_by_data(Customer customer)
     {
@@ -100,7 +100,7 @@ public class CustomerRepositoryTests : IntegrationTest
         result.Id.ShouldBe(customer.Id);
     }
     
-    [Fact]
+    [Fact, TestPriority(9)]
     public async Task should_return_null_with_id_not_present()
     {
         var customerId = new CustomerId(Guid.NewGuid().ToString());
@@ -109,7 +109,7 @@ public class CustomerRepositoryTests : IntegrationTest
         result.ShouldBeNull();
     }
     
-    [Theory]
+    [Theory, TestPriority(10)]
     [LoadData("customer.Id")]
     public async Task should_return_true_on_check_by_id(CustomerId id)
     {
@@ -117,7 +117,7 @@ public class CustomerRepositoryTests : IntegrationTest
         result.ShouldBeTrue();
     }
     
-    [Fact]
+    [Fact, TestPriority(11)]
     public async Task should_return_false_on_check_by_id_not_present()
     {
         var customerId = new CustomerId(Guid.NewGuid().ToString());
@@ -125,7 +125,7 @@ public class CustomerRepositoryTests : IntegrationTest
         result.ShouldBeFalse();
     }
     
-    [Theory]
+    [Theory, TestPriority(12)]
     [LoadData("customer")]
     public async Task should_add_new_customer(Customer customer)
     {
@@ -152,7 +152,7 @@ public class CustomerRepositoryTests : IntegrationTest
         result.Id.ShouldBe(customerId);
     }
     
-    [Theory]
+    [Theory, TestPriority(13)]
     [LoadData("customer")]
     public async Task should_update_a_customer(Customer customer)
     {
@@ -177,7 +177,7 @@ public class CustomerRepositoryTests : IntegrationTest
         result.LastName.ShouldBe(customer.LastName);
     }
     
-    [Theory]
+    [Theory, TestPriority(14)]
     [LoadData("customer")]
     public async Task should_return_record_events_by_id(Customer customer)
     {
@@ -212,7 +212,7 @@ public class CustomerRepositoryTests : IntegrationTest
         result.CustomerRoleChangedEvents.Last().Role.ShouldBe(CustomerRole.Dealer);
     }
     
-    [Theory]
+    [Theory, TestPriority(15)]
     [InlineData("3")]
     public async Task should_activate_customer(string id)
     {
@@ -230,7 +230,7 @@ public class CustomerRepositoryTests : IntegrationTest
         result.IsActive.ShouldBe(true);
     }
     
-    [Theory]
+    [Theory, TestPriority(16)]
     [InlineData("3")]
     public async Task should_deactivate_customer(string id)
     {
@@ -248,7 +248,7 @@ public class CustomerRepositoryTests : IntegrationTest
         result.IsActive.ShouldBe(false);
     }
     
-    [Theory]
+    [Theory, TestPriority(17)]
     [InlineData("2")]
     public async Task should_delete_customer(string id)
     {

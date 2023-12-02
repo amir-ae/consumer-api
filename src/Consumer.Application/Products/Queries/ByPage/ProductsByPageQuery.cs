@@ -8,7 +8,7 @@ namespace Consumer.Application.Products.Queries.ByPage;
 
 public record ProductsByPageQuery(
     int PageSize,
-    int PageIndex,
+    int PageNumber,
     bool? NextPage,
     ProductId? KeyId,
     CentreId? CentreId) : IRequest<ErrorOr<PaginatedList<ProductResponse>>>;

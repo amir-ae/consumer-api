@@ -18,13 +18,13 @@ public sealed class ProductsByPageQueryHandler : IRequestHandler<ProductsByPageQ
 
     public async Task<ErrorOr<PaginatedList<ProductResponse>>> Handle(ProductsByPageQuery query, CancellationToken ct = default)
     {
-        var (pageSize, pageIndex, nextPage, keyId, centreId) = query;
+        var (pageSize, pageNumber, nextPage, keyId, centreId) = query;
 
-        var (products, totalCount) = await _productRepository.ByPageAsync(pageSize, pageIndex, nextPage, keyId, centreId, ct);
+        var (products, totalCount) = await _productRepository.ByPageAsync(pageSize, pageNumber, nextPage, keyId, centreId, ct);
 
         var result = products.Adapt<List<ProductResponse>>();
 
         return new PaginatedList<ProductResponse>(
-            pageIndex, pageSize, totalCount, result);
+            pageNumber, pageSize, totalCount, result);
     }
 }

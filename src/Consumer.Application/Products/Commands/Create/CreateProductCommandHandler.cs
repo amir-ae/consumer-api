@@ -34,10 +34,9 @@ public sealed class CreateProductCommandHandler : IRequestHandler<CreateProductC
             dateOfDemandForCompensation, demanderFullName, createBy, createAt) = command;
 
         Func<ProductCreatedEvent, CancellationToken, Task<Product>> create = _productRepository.CreateAsync;
-        Action<ProductEvent, int?> append = _productRepository.Append;
-        Action<CustomerEvent, int?> customerAppend = _customerRepository.Append;
-        int? customerVersion = null;
-        
+        Action<ProductEvent> append = _productRepository.Append;
+        Action<CustomerEvent> customerAppend = _customerRepository.Append;
+
         var ownerId = owner?.CustomerId;
         var dealerId = dealer?.CustomerId;
 
@@ -89,7 +88,7 @@ public sealed class CreateProductCommandHandler : IRequestHandler<CreateProductC
             }
             
             ownerName = newOwner.FullName;
-            newOwner.AddProduct(productId, createBy, createAt, customerAppend, ref customerVersion);
+            newOwner.AddProduct(productId, createBy, createAt, customerAppend);
         }
         
         string? dealerName = null;
@@ -139,7 +138,7 @@ public sealed class CreateProductCommandHandler : IRequestHandler<CreateProductC
             }
 
             dealerName = newDealer.FullName;
-            newDealer.AddProduct(productId, createBy, createAt, customerAppend, ref customerVersion);
+            newDealer.AddProduct(productId, createBy, createAt, customerAppend);
         }
         
         var product = await _productRepository.ByIdAsync(productId, ct);

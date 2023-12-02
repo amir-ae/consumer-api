@@ -39,7 +39,7 @@ public sealed class CreateCustomerCommandHandler : IRequestHandler<CreateCustome
         var customerId = customer is null ? new CustomerId(Guid.NewGuid().ToString()) : customer.Id;
         var productIds = products?.Select(p => p.ProductId).ToHashSet();
         Func<CustomerCreatedEvent, CancellationToken, Task<Customer>> create = _customerRepository.CreateAsync;
-        Action<CustomerEvent, int?> append = _customerRepository.Append;
+        Action<CustomerEvent> append = _customerRepository.Append;
         
         if (customer is null)
         {

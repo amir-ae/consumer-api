@@ -28,7 +28,7 @@ namespace Consumer.API.Contract.V1
             public required string RelativeUri { get; init; }
             public string Uri(string? id = null)
             {
-                if (!string.IsNullOrEmpty(id))
+                if (!string.IsNullOrWhiteSpace(id))
                 {
                     return Regex.Replace(RelativeUri, "{.*?}", id);
                 }

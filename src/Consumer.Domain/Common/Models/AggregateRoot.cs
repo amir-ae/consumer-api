@@ -15,11 +15,11 @@ public abstract record AggregateRoot<TId, T> : BaseEntity<TId>, IAuditable, IAct
         protected init {}
     }
 
-    public int Version { get; set; }
-    public DateTimeOffset CreatedAt { get; protected init; } = DateTimeOffset.Now;
+    public DateTimeOffset CreatedAt { get; protected init; } = DateTimeOffset.UtcNow;
     public AppUserId CreatedBy { get; protected init; } = new (new Guid());
     public DateTimeOffset? LastModifiedAt { get; protected init; }
     public AppUserId? LastModifiedBy { get; protected init; }
+    public int Version { get; set; }
     public bool IsActive { get; protected init; } = true;
     public bool IsDeleted { get; protected init; }
 }

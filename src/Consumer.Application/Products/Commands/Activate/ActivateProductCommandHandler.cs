@@ -23,10 +23,14 @@ public sealed class ActivateProductCommandHandler : IRequestHandler<ActivateProd
         if (product is null) return Error.NotFound(
             nameof(ProductId), $"{nameof(Product)} with id {productId} is not found.");
         
-        product = product.Activate(activateBy, _productRepository.Append);
+        product.Activate(activateBy, _productRepository.Append);
         
         await _productRepository.SaveChangesAsync(ct);
         
-        return product;
+        var result = await _productRepository.ByStreamIdAsync(productId, ct);
+        if (result is null) return Error.Unexpected(
+            nameof(ProductId), $"{nameof(Product)} stream with id {productId} is not found.");
+
+        return result;
     }
 }

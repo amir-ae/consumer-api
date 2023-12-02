@@ -6,7 +6,7 @@ public sealed class CustomersByPageDetailQueryValidator : AbstractValidator<Cust
 {
     public CustomersByPageDetailQueryValidator()
     {
-        RuleFor(x => x.PageIndex)
+        RuleFor(x => x.PageNumber)
             .GreaterThan(0);
         RuleFor(x => x.PageSize)
             .GreaterThan(0);

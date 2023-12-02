@@ -26,13 +26,13 @@ public class QueueSettings
     private static string? Examine(string name, string[] properties)
     {
         var equals = CheckEquals(name, properties);
-        if (!string.IsNullOrEmpty(equals)) return equals;
+        if (!string.IsNullOrWhiteSpace(equals)) return equals;
         
         var startsWith = CheckStartsWith(name, properties);
-        if (!string.IsNullOrEmpty(startsWith)) return startsWith;
+        if (!string.IsNullOrWhiteSpace(startsWith)) return startsWith;
         
         var contains = CheckContains(name, properties);
-        if (!string.IsNullOrEmpty(contains)) return contains;
+        if (!string.IsNullOrWhiteSpace(contains)) return contains;
 
         return null;
     }

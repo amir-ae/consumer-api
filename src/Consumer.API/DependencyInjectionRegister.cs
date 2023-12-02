@@ -1,5 +1,5 @@
-using Consumer.API.Extensions.Caching;
 using Microsoft.Extensions.Options;
+using Consumer.API.Extensions.Caching;
 using Consumer.API.Extensions.ErrorHandling;
 using Consumer.API.Extensions.Mapping;
 using Consumer.API.Extensions.Swagger;

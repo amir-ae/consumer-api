@@ -22,9 +22,9 @@ public sealed class ProductsByPageDetailQueryHandler : IRequestHandler<ProductsB
 
     public async Task<ErrorOr<PaginatedList<ProductResponse>>> Handle(ProductsByPageDetailQuery query, CancellationToken ct = default)
     {
-        var (pageSize, pageIndex, nextPage, keyId, centreId) = query;
+        var (pageSize, pageNumber, nextPage, keyId, centreId) = query;
 
-        var (products, totalCount) = await _productRepository.ByPageDetailAsync(pageSize, pageIndex, nextPage, keyId, centreId, ct);
+        var (products, totalCount) = await _productRepository.ByPageDetailAsync(pageSize, pageNumber, nextPage, keyId, centreId, ct);
 
         var tasks = products.Adapt<List<ProductResponse>>()
             .Select(product => _enrichmentService.EnrichProductResponse(product, ct));
@@ -32,6 +32,6 @@ public sealed class ProductsByPageDetailQueryHandler : IRequestHandler<ProductsB
         var result = await ValueTaskEx.WhenAll(tasks);
 
         return new PaginatedList<ProductResponse>(
-            pageIndex, pageSize, totalCount, result);
+            pageNumber, pageSize, totalCount, result);
     }
 }

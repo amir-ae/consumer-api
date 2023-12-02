@@ -40,12 +40,12 @@ public static class CustomerEndpoints
             .AddEndpointFilter<ETagEndpointFilter<CustomerResponse, CustomerForListingResponse>>()
             .WithTags(nameof(Customer))
             .WithOpenApi();
-
+        
         customersGroup.MapGet(Customers.ByPage.Pattern,
-                async ([FromQuery] int? pageSize, [FromQuery] int? pageIndex, [FromQuery] bool? nextPage, 
+                async ([FromQuery] int? pageSize, [FromQuery] int? pageNumber, [FromQuery] bool? nextPage, 
                     [FromQuery] string? keyId, [FromQuery] Guid? centreId, ISender mediator, IErrorHandler errorHandler, CancellationToken ct) =>
                 {
-                    var query = new CustomersByPageQuery(pageSize ?? 10, pageIndex ?? 1, nextPage, 
+                    var query = new CustomersByPageQuery(pageSize ?? 10, pageNumber ?? 1, nextPage, 
                         !string.IsNullOrWhiteSpace(keyId) ? new CustomerId(keyId) : null,
                         centreId.HasValue ? new CentreId(centreId.Value) : null);
                     var result = await mediator.Send(query, ct).DefaultIfCanceled();
@@ -55,17 +55,17 @@ public static class CustomerEndpoints
             .Produces(StatusCodes.Status304NotModified)
             .Produces<HttpValidationProblemDetails>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden)
             .Produces(StatusCodes.Status499ClientClosedRequest)
             .Produces(StatusCodes.Status500InternalServerError)
             .WithName(Customers.ByPage.Name)
-            .WithDescription(Customers.ByPage.Description)
-            .CacheOutput("Auth");
+            .WithDescription(Customers.ByPage.Description);
 
         customersGroup.MapGet(Customers.ByPageDetail.Pattern,
-                async ([FromQuery] int? pageSize, [FromQuery] int? pageIndex, [FromQuery] bool? nextPage, 
+                async ([FromQuery] int? pageSize, [FromQuery] int? pageNumber, [FromQuery] bool? nextPage, 
                     [FromQuery] string? keyId, [FromQuery] Guid? centreId, ISender mediator, IErrorHandler errorHandler, CancellationToken ct) =>
                 {
-                    var query = new CustomersByPageDetailQuery(pageSize ?? 10, pageIndex ?? 1, nextPage, 
+                    var query = new CustomersByPageDetailQuery(pageSize ?? 10, pageNumber ?? 1, nextPage, 
                         !string.IsNullOrWhiteSpace(keyId) ? new CustomerId(keyId) : null,
                         centreId.HasValue ? new CentreId(centreId.Value) : null);
                     var result = await mediator.Send(query, ct).DefaultIfCanceled();
@@ -75,11 +75,11 @@ public static class CustomerEndpoints
             .Produces(StatusCodes.Status304NotModified)
             .Produces<HttpValidationProblemDetails>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden)
             .Produces(StatusCodes.Status499ClientClosedRequest)
             .Produces(StatusCodes.Status500InternalServerError)
             .WithName(Customers.ByPageDetail.Name)
-            .WithDescription(Customers.ByPageDetail.Description)
-            .CacheOutput("Auth");
+            .WithDescription(Customers.ByPageDetail.Description);
 
         customersGroup.MapGet(Customers.List.Pattern,
                 async ([FromQuery] Guid? centreId, ISender mediator, IErrorHandler errorHandler, CancellationToken ct) =>
@@ -91,6 +91,7 @@ public static class CustomerEndpoints
             .Produces<List<CustomerForListingResponse>>()
             .Produces(StatusCodes.Status304NotModified)
             .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden)
             .Produces(StatusCodes.Status499ClientClosedRequest)
             .Produces(StatusCodes.Status500InternalServerError)
             .WithName(Customers.List.Name)
@@ -107,6 +108,7 @@ public static class CustomerEndpoints
             .Produces<List<CustomerResponse>>()
             .Produces(StatusCodes.Status304NotModified)
             .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden)
             .Produces(StatusCodes.Status499ClientClosedRequest)
             .Produces(StatusCodes.Status500InternalServerError)
             .WithName(Customers.ListDetail.Name)
@@ -125,6 +127,7 @@ public static class CustomerEndpoints
             .Produces(StatusCodes.Status304NotModified)
             .Produces<HttpValidationProblemDetails>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden)
             .Produces(StatusCodes.Status404NotFound)
             .Produces(StatusCodes.Status499ClientClosedRequest)
             .Produces(StatusCodes.Status500InternalServerError)
@@ -143,6 +146,7 @@ public static class CustomerEndpoints
             .Produces(StatusCodes.Status304NotModified)
             .Produces<HttpValidationProblemDetails>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden)
             .Produces(StatusCodes.Status404NotFound)
             .Produces(StatusCodes.Status499ClientClosedRequest)
             .Produces(StatusCodes.Status500InternalServerError)
@@ -160,6 +164,7 @@ public static class CustomerEndpoints
             .Produces<CustomerEventsResponse>()
             .Produces<HttpValidationProblemDetails>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden)
             .Produces(StatusCodes.Status404NotFound)
             .Produces(StatusCodes.Status499ClientClosedRequest)
             .Produces(StatusCodes.Status500InternalServerError)
@@ -184,6 +189,7 @@ public static class CustomerEndpoints
             .Produces<CustomerResponse>(StatusCodes.Status201Created)
             .Produces<HttpValidationProblemDetails>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden)
             .Produces(StatusCodes.Status499ClientClosedRequest)
             .Produces(StatusCodes.Status500InternalServerError)
             .WithName(Customers.Create.Name)
@@ -197,7 +203,7 @@ public static class CustomerEndpoints
                     var command = request.Adapt<UpdateCustomerCommand>() with
                     {
                         CustomerId = new CustomerId(customerId),
-                        Version = ToExpectedVersion(eTag)
+                        Version = ToVersion(eTag)
                     };
                     var result = await mediator.Send(command, ct).DefaultIfCanceled();
                     return await result.MatchAsync(async customer =>
@@ -211,7 +217,9 @@ public static class CustomerEndpoints
             .Produces<CustomerResponse>()
             .Produces<HttpValidationProblemDetails>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden)
             .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status409Conflict)
             .Produces(StatusCodes.Status499ClientClosedRequest)
             .Produces(StatusCodes.Status500InternalServerError)
             .WithName(Customers.Update.Name)
@@ -233,6 +241,7 @@ public static class CustomerEndpoints
             .Produces<CustomerResponse>()
             .Produces<HttpValidationProblemDetails>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden)
             .Produces(StatusCodes.Status404NotFound)
             .Produces(StatusCodes.Status499ClientClosedRequest)
             .Produces(StatusCodes.Status500InternalServerError)
@@ -255,6 +264,7 @@ public static class CustomerEndpoints
             .Produces<CustomerResponse>()
             .Produces<HttpValidationProblemDetails>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden)
             .Produces(StatusCodes.Status404NotFound)
             .Produces(StatusCodes.Status499ClientClosedRequest)
             .Produces(StatusCodes.Status500InternalServerError)
@@ -278,6 +288,7 @@ public static class CustomerEndpoints
             .Produces(StatusCodes.Status204NoContent)
             .Produces<HttpValidationProblemDetails>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden)
             .Produces(StatusCodes.Status404NotFound)
             .Produces(StatusCodes.Status499ClientClosedRequest)
             .Produces(StatusCodes.Status500InternalServerError)

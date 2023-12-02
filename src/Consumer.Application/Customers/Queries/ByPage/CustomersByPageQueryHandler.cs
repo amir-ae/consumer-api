@@ -22,9 +22,9 @@ public sealed class CustomersByPageQueryHandler : IRequestHandler<CustomersByPag
 
     public async Task<ErrorOr<PaginatedList<CustomerResponse>>> Handle(CustomersByPageQuery query, CancellationToken ct = default)
     {
-        var (pageSize, pageIndex, nextPage, keyId, centreId) = query;
+        var (pageSize, pageNumber, nextPage, keyId, centreId) = query;
 
-        var (customers, totalCount) = await _customerRepository.ByPageAsync(pageSize, pageIndex, nextPage, keyId, centreId, ct);
+        var (customers, totalCount) = await _customerRepository.ByPageAsync(pageSize, pageNumber, nextPage, keyId, centreId, ct);
 
         var tasks = customers.Adapt<List<CustomerResponse>>()
             .Select(customer => _enrichmentService.EnrichCustomerResponse(customer, ct));
@@ -32,6 +32,6 @@ public sealed class CustomersByPageQueryHandler : IRequestHandler<CustomersByPag
         var result = await ValueTaskEx.WhenAll(tasks);
 
         return new PaginatedList<CustomerResponse>(
-            pageIndex, pageSize, totalCount, result);
+            pageNumber, pageSize, totalCount, result);
     }
 }

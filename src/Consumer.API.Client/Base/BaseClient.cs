@@ -112,10 +112,11 @@ public class BaseClient : IBaseClient
     public async Task<ErrorOr<T>> ErrorContent<T>(HttpResponseMessage response, CancellationToken ct = default)
     {
         var statusCode = (int)response.StatusCode;
-        if ((int)response.StatusCode == StatusCodes.Status304NotModified)
+        if (statusCode == StatusCodes.Status304NotModified)
         {
-            return Error.Custom(StatusCodes.Status304NotModified, "NotModified", 
-                "Response is not modified");;
+            return Error.Custom(StatusCodes.Status304NotModified, 
+                nameof(StatusCodes.Status304NotModified), 
+                "The requested resource has not been modified since the last time it was loaded.");
         }
         
         string? description;
@@ -175,6 +176,17 @@ public class BaseClient : IBaseClient
                 {
                     return Error.Unauthorized(statusCode.ToString(), description);
                 }
+            case StatusCodes.Status403Forbidden:
+                try
+                {
+                    var errors = JsonConvert.DeserializeObject<Dictionary<string, string[]>>(description);
+                    return errors!.Select(kvp => 
+                        Error.Forbidden(kvp.Key, kvp.Value.First())).ToList();
+                }
+                catch
+                {
+                    return Error.Forbidden(statusCode.ToString(), description);
+                }
             case StatusCodes.Status404NotFound:
                 return Error.NotFound(statusCode.ToString(), description);
             case StatusCodes.Status409Conflict:
@@ -215,11 +227,5 @@ public class BaseClient : IBaseClient
         };
 
         return ub.Uri;
-    }
-    
-    private void AddAuthorizationHeader(string? jwt)
-    {
-        _client.DefaultRequestHeaders.Authorization = string.IsNullOrEmpty(jwt) ?
-            null : new AuthenticationHeaderValue("bearer", jwt);
     }
 }

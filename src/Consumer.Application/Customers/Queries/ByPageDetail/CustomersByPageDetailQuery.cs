@@ -9,7 +9,7 @@ namespace Consumer.Application.Customers.Queries.ByPageDetail;
 
 public record CustomersByPageDetailQuery(
     int PageSize,
-    int PageIndex,
+    int PageNumber,
     bool? NextPage,
     CustomerId? KeyId,
     CentreId? CentreId) : IRequest<ErrorOr<PaginatedList<CustomerResponse>>>;

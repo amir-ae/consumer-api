@@ -50,7 +50,7 @@ public class CacheAuthenticatedRequestsPolicy : IOutputCachePolicy
         }
 
         // Verify existence of authorization headers
-        //if (!StringValues.IsNullOrEmpty(request.Headers.Authorization) || request.HttpContext.User?.Identity?.IsAuthenticated == true)
+        //if (!StringValues.IsNullOrWhiteSpace(request.Headers.Authorization) || request.HttpContext.User?.Identity?.IsAuthenticated == true)
         //{
         //    return false;
         //}
