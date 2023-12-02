@@ -15,7 +15,7 @@
     "PanelSerialNumber": null,
     "WarrantyCardNumber": null,
     "DateOfPurchase": null,
-    "Orders": [{ "OrderId": { "Value": "A" }, "CentreId": { "Value": "14424963-25e4-4731-8501-461750d27037" }}]
+    "Orders": [{ "Id": { "Value": "A" }, "CentreId": { "Value": "14424963-25e4-4731-8501-461750d27037" }}]
   },
   {
     "Id": {

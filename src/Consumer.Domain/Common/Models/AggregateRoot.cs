@@ -1,25 +1,25 @@
 ﻿using System.Runtime.Serialization;
 using Consumer.Domain.Common.Interfaces;
 using Consumer.Domain.Common.ValueObjects;
+using Marten.Metadata;
 
 namespace Consumer.Domain.Common.Models;
 
-public abstract record AggregateRoot<TKey, T> : IAuditable, IActivatable, ISoftDeletable, IIdentifiable<TKey>
-    where TKey: StronglyTypedId<T>
+public abstract record AggregateRoot<TId, T> : BaseEntity<TId>, IAuditable, IActivatable, ISoftDeletable, IRevisioned
+    where TId: StronglyTypedId<T>
     where T : IComparable<T>
 {
-    public TKey Id { get; set; } = default!;
-    
     [IgnoreDataMember]
     public T AggregateId    {
         get => Id.Value;
-        set {}
+        protected init {}
     }
 
-    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.Now;
-    public AppUserId CreatedBy { get; set; } = new (new Guid());
-    public DateTimeOffset? LastModifiedAt { get; set; }
-    public AppUserId? LastModifiedBy { get; set; }
-    public bool IsActive { get; set; } = true;
-    public bool IsDeleted { get; set; }
+    public int Version { get; set; }
+    public DateTimeOffset CreatedAt { get; protected init; } = DateTimeOffset.Now;
+    public AppUserId CreatedBy { get; protected init; } = new (new Guid());
+    public DateTimeOffset? LastModifiedAt { get; protected init; }
+    public AppUserId? LastModifiedBy { get; protected init; }
+    public bool IsActive { get; protected init; } = true;
+    public bool IsDeleted { get; protected init; }
 }

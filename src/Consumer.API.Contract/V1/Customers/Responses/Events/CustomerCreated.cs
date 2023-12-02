@@ -1,14 +1,17 @@
+using Consumer.API.Contract.V1.Common;
+
 namespace Consumer.API.Contract.V1.Customers.Responses.Events;
 
-public sealed record CustomerCreated(string CustomerId,
+public record CustomerCreated(string CustomerId,
     string FirstName,
     string? MiddleName,
     string LastName,
     string FullName,
     string PhoneNumber,
-    CustomerCity City,
+    City City,
     string Address,
-    int Role,
-    IList<string>? ProductIds,
+    CustomerRole Role,
+    IList<string> ProductIds,
+    IList<Order> Orders,
     Guid CreatedBy,
     DateTimeOffset CreatedAt);

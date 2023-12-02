@@ -1,13 +1,15 @@
-﻿namespace Consumer.API.Contract.V1.Products.Responses;
+﻿using Consumer.API.Contract.V1.Common;
+using Consumer.API.Contract.V1.Common.Responses;
 
-public sealed record ProductForListingResponse(string ProductId,
+namespace Consumer.API.Contract.V1.Products.Responses;
+
+public record ProductForListingResponse(string Id,
     string Brand,
     string Model,
     int? SerialId,
     string? OwnerId,
     string? DealerId,
-    IList<ProductOrder> Orders,
-    DateTimeOffset CreatedAt,
+    IList<Order> Orders,
     string? DeviceType,
     string? PanelModel,
     string? PanelSerialNumber,
@@ -17,4 +19,5 @@ public sealed record ProductForListingResponse(string ProductId,
     decimal? PurchasePrice,
     bool? IsUnrepairable,
     DateTimeOffset? DateOfDemandForCompensation,
-    string? DemanderFullName);
+    string? DemanderFullName,
+    DateTimeOffset CreatedAt) : ForListingResponse(CreatedAt);

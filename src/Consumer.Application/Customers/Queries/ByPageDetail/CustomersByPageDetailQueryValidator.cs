@@ -2,14 +2,13 @@
 
 namespace Consumer.Application.Customers.Queries.ByPageDetail;
 
-
 public sealed class CustomersByPageDetailQueryValidator : AbstractValidator<CustomersByPageDetailQuery>
 {
     public CustomersByPageDetailQueryValidator()
     {
         RuleFor(x => x.PageIndex)
-            .NotEmpty();
+            .GreaterThan(0);
         RuleFor(x => x.PageSize)
-            .NotEmpty();
+            .GreaterThan(0);
     }
 }

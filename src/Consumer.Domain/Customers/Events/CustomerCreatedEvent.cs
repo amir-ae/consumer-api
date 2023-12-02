@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using Consumer.Domain.Common.Entities;
 using Consumer.Domain.Common.ValueObjects;
 using Consumer.Domain.Customers.ValueObjects;
 using Consumer.Domain.Products.ValueObjects;
@@ -19,6 +20,7 @@ public sealed record CustomerCreatedEvent : CustomerEvent
         string address,
         CustomerRole? role,
         HashSet<ProductId>? productIds,
+        HashSet<Order>? orders,
         AppUserId createdBy,
         DateTimeOffset? createdAt = null) : base(
         customerId)
@@ -45,7 +47,8 @@ public sealed record CustomerCreatedEvent : CustomerEvent
         CityId = cityId;
         Address = address;
         Role = role ?? CustomerRole.Owner;
-        ProductIds = productIds;
+        ProductIds = productIds ?? new();
+        Orders = orders ?? new();
         CreatedBy = createdBy;
         CreatedAt = createdAt ?? DateTimeOffset.UtcNow;
     }
@@ -58,7 +61,8 @@ public sealed record CustomerCreatedEvent : CustomerEvent
     public required CityId CityId { get; init; }
     public required string Address { get; init; }
     public required CustomerRole Role { get; init; }
-    public required HashSet<ProductId>? ProductIds { get; init; }
+    public required HashSet<ProductId> ProductIds { get; init; }
+    public required HashSet<Order> Orders { get; init; }
     public required AppUserId CreatedBy { get; init; }
     public DateTimeOffset CreatedAt { get; init; }
 }

@@ -1,13 +1,12 @@
-﻿using Consumer.API.Contract.V1.Customers.Responses;
-using MediatR;
+﻿using MediatR;
 using ErrorOr;
 using Consumer.Application.Common.Interfaces.Persistence;
-using Consumer.Domain.Customers.Events;
-using Mapster;
+using Consumer.Domain.Customers;
+using Consumer.Domain.Customers.ValueObjects;
 
 namespace Consumer.Application.Customers.Commands.Activate;
 
-public sealed class ActivateCustomerCommandHandler : IRequestHandler<ActivateCustomerCommand, ErrorOr<CustomerResponse>>
+public sealed class ActivateCustomerCommandHandler : IRequestHandler<ActivateCustomerCommand, ErrorOr<Customer>>
 {
     private readonly ICustomerRepository _customerRepository;
 
@@ -16,16 +15,18 @@ public sealed class ActivateCustomerCommandHandler : IRequestHandler<ActivateCus
         _customerRepository = customerRepository;
     }
 
-    public async Task<ErrorOr<CustomerResponse>> Handle(ActivateCustomerCommand command, CancellationToken ct = default)
+    public async Task<ErrorOr<Customer>> Handle(ActivateCustomerCommand command, CancellationToken ct = default)
     {
-        var (appUserId, customerId) = command;
+        var (customerId, activateBy) = command;
 
-        var customerActivatedEvent = new CustomerActivatedEvent(
-            customerId,
-            appUserId);
+        var customer = await _customerRepository.ByIdAsync(customerId, ct);
+        if (customer is null) return Error.NotFound(
+            nameof(CustomerId), $"{nameof(Customer)} with id {customerId} is not found.");
 
-        var customer = await _customerRepository.ActivateAsync(customerActivatedEvent, ct);
+        customer = customer.Activate(activateBy, _customerRepository.Append);
 
-        return customer.Adapt<CustomerResponse>();
+        await _customerRepository.SaveChangesAsync(ct);
+
+        return customer;
     }
 }

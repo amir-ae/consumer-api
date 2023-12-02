@@ -6,7 +6,7 @@ public sealed class CreateProductCommandValidator : AbstractValidator<CreateProd
 {
     public CreateProductCommandValidator()
     {
-        RuleFor(x => x.AppUserId.Value).NotEmpty();
+        RuleFor(x => x.CreateBy.Value).NotEmpty();
         RuleFor(x => x.ProductId.Value).NotEmpty();
         RuleFor(x => x.Brand).NotEmpty().MaximumLength(35);
         RuleFor(x => x.Model).NotEmpty().MaximumLength(35);

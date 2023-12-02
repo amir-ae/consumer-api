@@ -58,11 +58,11 @@ namespace Consumer.API.Contract.V1
             public static readonly Route ByPageDetail =
                 new("detail", "CustomersDetail", "Get customers detail by page");
 
-            public static readonly Route All = 
-                new("all", "AllCustomers", "Get all customers");
+            public static readonly Route List = 
+                new("list", "ListCustomers", "Get all customers");
 
-            public static readonly Route AllDetail = 
-                new("all-detail", "AllCustomersDetail", "Get all customers detail");
+            public static readonly Route ListDetail = 
+                new("list-detail", "ListCustomersDetail", "Get all customers detail");
 
             public static readonly Route ById = 
                 new("{customerId}", "CustomerById", "Get customer by id");
@@ -73,11 +73,11 @@ namespace Consumer.API.Contract.V1
             public static readonly Route EventsById = 
                 new("{customerId}/events", "CustomerEventsById", "Get customer events by id");
 
-            public static readonly Route Post = 
-                new("", "PostCustomer", "Create a new customer");
+            public static readonly Route Create = 
+                new("", "CreateCustomer", "Create a new customer");
 
-            public static readonly Route Patch = 
-                new("{customerId}", "PatchCustomer", "Update customer by id");
+            public static readonly Route Update = 
+                new("{customerId}", "UpdateCustomer", "Update customer by id");
 
             public static readonly Route Activate =
                 new("{customerId}/activate", "ActivateCustomer", "Activate customer by id");
@@ -106,11 +106,11 @@ namespace Consumer.API.Contract.V1
             public static readonly Route ByPageDetail =
                new("detail", "ProductsDetail", "Get products detail by page");
 
-            public static readonly Route All = 
-                new("all", "AllProducts", "Get all products");
+            public static readonly Route List = 
+                new("list", "ListProducts", "Get all products");
 
-            public static readonly Route AllDetail = 
-                new("all-detail", "AllProductsDetail", "Get all products detail");
+            public static readonly Route ListDetail = 
+                new("list-detail", "ListProductsDetail", "Get all products detail");
 
             public static readonly Route ById = 
                 new("{productId}", "ProductById", "Get product by id");
@@ -124,17 +124,14 @@ namespace Consumer.API.Contract.V1
             public static readonly Route Check = 
                 new("check/{productId}", "CheckProduct", "check product by id");
 
-            public static readonly Route DetailByCentreId = 
-                new("{centreId:guid}/detail", "ProductsDetailByCentreId", "Get products detail by centre id");
-
             public static readonly Route DetailByOrderId = 
                 new("order/{orderId}", "ProductsDetailByOrderId", "Get product detail by order id");
 
-            public static readonly Route Post = 
-                new("", "PostProduct", "Create a new product");
+            public static readonly Route Create = 
+                new("", "CreateProduct", "Create a new product");
 
-            public static readonly Route Patch = 
-                new("{productId}", "PatchProduct", "Update product by id");
+            public static readonly Route Update = 
+                new("{productId}", "UpdateProduct", "Update product by id");
 
             public static readonly Route Activate =
                 new("{productId}/activate", "ActivateProduct", "Activate product by id");

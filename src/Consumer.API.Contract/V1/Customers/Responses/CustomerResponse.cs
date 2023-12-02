@@ -1,32 +1,31 @@
-﻿using Consumer.API.Contract.V1.Common.Responses;
+﻿using Consumer.API.Contract.V1.Common;
+using Consumer.API.Contract.V1.Common.Responses;
 using Consumer.API.Contract.V1.Products.Responses;
 
 namespace Consumer.API.Contract.V1.Customers.Responses;
 
-public sealed record CustomerResponse(string CustomerId,
+public record CustomerResponse(string Id,
     string FirstName,
     string? MiddleName,
     string LastName,
     string FullName,
     string PhoneNumber,
-    CustomerCity City,
+    City City,
     string Address,
-    int Role,
+    CustomerRole Role,
     IList<string> ProductIds,
+    IList<Order> Orders,
+    int Version,
     DateTimeOffset CreatedAt,
     Guid CreatedBy,
     DateTimeOffset? LastModifiedAt,
     Guid? LastModifiedBy,
     bool IsActive,
     bool IsDeleted,
-    IList<ProductForListingResponse>? Products) : AuditableResponse(CreatedAt, 
+    IList<ProductForListingResponse>? Products) : AuditableResponse(Version,
+    CreatedAt, 
     CreatedBy, 
     LastModifiedAt, 
     LastModifiedBy,
     IsActive, 
     IsDeleted);
-
-public sealed record CustomerCity(int CityId,
-    string? Name,
-    string? Oblast,
-    string? Code);

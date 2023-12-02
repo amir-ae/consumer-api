@@ -24,7 +24,8 @@ using Marten;
 using Marten.Events.Daemon.Resiliency;
 using MassTransit;
 using Microsoft.AspNetCore.Http.Json;
-using Npgsql;
+using Polly;
+using Polly.Retry;
 using Weasel.Core;
 
 namespace Consumer.Infrastructure;
@@ -46,7 +47,7 @@ public static class DependencyInjectionRegister
             //.AddPolicyHandler(HttpClientPolicies.RetryPolicy())
             .AddPolicyHandler(HttpClientPolicies.CircuitBreakerPolicy())
             .AddTypedClient<ICatalogClient>((hc, sp) 
-                => new CatalogClient(hc.Configure(ApiUrlConstants.Catalog, config, sp)));
+                => new CatalogClient(hc.Configure(ApiEndpoints.CatalogApi, config, sp)));
 
         services.Configure<EventBusSettings>(config.GetSection(EventBusSettings.Key));
         services.Configure<QueueSettings>(config.GetSection(QueueSettings.Key));
@@ -76,11 +77,12 @@ public static class DependencyInjectionRegister
     public static void AddPersistence(this IServiceCollection services, IConfiguration configuration)
     {
         var serializer = new Marten.Services.JsonNetSerializer();
-        serializer.Customize(_ =>
+        serializer.Customize(c =>
         {
-            _.Converters.Add(new StronglyTypedIdJsonConverter());
+            c.Converters.Add(new StronglyTypedIdJsonConverter());
+            c.ContractResolver = new ResolvePrivateSetters();
         });
-        
+
         var defaultConnection = configuration.GetConnectionString("Default")!;
         var maintenanceConnection = configuration.GetConnectionString("Maintenance")!;
         AWSConfigs.AWSRegion = "eu-north-1";
@@ -92,7 +94,10 @@ public static class DependencyInjectionRegister
             storeOptions.Connection(defaultConnection);
             storeOptions.AutoCreateSchemaObjects = AutoCreate.CreateOrUpdate;
             storeOptions.Serializer(serializer);
-            storeOptions.RetryPolicy(DefaultRetryPolicy.Twice());
+            storeOptions.ConfigurePolly(o => o.AddRetry(new RetryStrategyOptions
+            {
+                MaxRetryAttempts = 2,
+            }));
             storeOptions.CreateDatabasesForTenants(c =>
             {
                 c.MaintenanceDatabase(maintenanceConnection);

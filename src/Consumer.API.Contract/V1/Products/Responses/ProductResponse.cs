@@ -1,21 +1,16 @@
-﻿using Consumer.API.Contract.V1.Common.Responses;
+﻿using Consumer.API.Contract.V1.Common;
+using Consumer.API.Contract.V1.Common.Responses;
 using Consumer.API.Contract.V1.Customers.Responses;
 
 namespace Consumer.API.Contract.V1.Products.Responses;
 
-public sealed record ProductResponse(string ProductId,
+public record ProductResponse(string Id,
     string Brand,
     string Model,
     int? SerialId,
     string? OwnerId,
     string? DealerId,
-    IList<ProductOrder> Orders,
-    DateTimeOffset CreatedAt,
-    Guid CreatedBy,
-    DateTimeOffset? LastModifiedAt,
-    Guid? LastModifiedBy,
-    bool IsActive,
-    bool IsDeleted,
+    IList<Order> Orders,
     string? DeviceType,
     string? PanelModel,
     string? PanelSerialNumber,
@@ -26,19 +21,19 @@ public sealed record ProductResponse(string ProductId,
     bool? IsUnrepairable,
     DateTimeOffset? DateOfDemandForCompensation,
     string? DemanderFullName,
-    ProductSerial? Serial,
+    Serial? Serial,
     CustomerForListingResponse? Owner,
-    CustomerForListingResponse? Dealer) : AuditableResponse(CreatedAt, 
+    CustomerForListingResponse? Dealer,
+    int Version,
+    DateTimeOffset CreatedAt,
+    Guid CreatedBy,
+    DateTimeOffset? LastModifiedAt,
+    Guid? LastModifiedBy,
+    bool IsActive,
+    bool IsDeleted) : AuditableResponse(Version,
+    CreatedAt, 
     CreatedBy, 
     LastModifiedAt, 
     LastModifiedBy,
     IsActive, 
     IsDeleted);
-
-public sealed record ProductOrder(string OrderId,
-    Guid CentreId);
-
-public sealed record ProductSerial(string Brand,
-    string Model,
-    string? Lot,
-    DateTimeOffset? ProductionDate);

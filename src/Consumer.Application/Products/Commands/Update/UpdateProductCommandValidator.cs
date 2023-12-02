@@ -12,7 +12,8 @@ public sealed class UpdateProductCommandValidator : AbstractValidator<UpdateProd
     public UpdateProductCommandValidator(IProductRepository productRepository)
     {
         _productRepository = productRepository;
-        RuleFor(x => x.AppUserId.Value).NotEmpty();
+        RuleFor(x => x.UpdateBy.Value).NotEmpty();
         RuleFor(x => x.ProductId.Value).NotEmpty();
+        RuleFor(x => x.Version).GreaterThan(0);
     }
 }

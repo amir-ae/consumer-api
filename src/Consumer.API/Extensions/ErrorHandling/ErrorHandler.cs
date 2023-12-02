@@ -26,7 +26,8 @@ public class ErrorHandler : IErrorHandler
         {
             ErrorType.Unauthorized => StatusCodes.Status401Unauthorized,
             ErrorType.NotFound => StatusCodes.Status404NotFound,
-            ErrorType.Conflict => error.Code == "ClientClosedRequest" ? 499 : StatusCodes.Status409Conflict,
+            ErrorType.Conflict => error.Code == "ClientClosedRequest" 
+                ? StatusCodes.Status499ClientClosedRequest : StatusCodes.Status409Conflict,
             _ => StatusCodes.Status500InternalServerError
         };
 
@@ -44,7 +45,11 @@ public class ErrorHandler : IErrorHandler
 
         foreach (var error in errors)
         {
-            dict.Add(error.Code, new [] { error.Description });
+            var added = dict.TryAdd(error.Code, new [] { error.Description });
+            if (!added && dict.TryGetValue(error.Code, out var errorArray))
+            {
+                dict[error.Code] = errorArray.Concat(new [] { error.Description }).ToArray();
+            }
             Log.Error(error.Description);
         }
 

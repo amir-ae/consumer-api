@@ -12,18 +12,17 @@ using Xunit;
 using Products = Consumer.API.Contract.V1.Routes.Products;
 
 namespace Consumer.API.Tests;
-    
+
 public class ProductEndpointsTests : IntegrationTest
 {
     private readonly ConsumerApplicationFactory<Program> _factory;
-    private const string Host = "https://localhost:44302";
-    
+
     public ProductEndpointsTests(ConsumerApplicationFactory<Program> factory) : base(factory)
     {
         _factory = factory;
     }
 
-    [Fact]
+    [Fact, TestPriority(1)]
     public async Task get_should_return_success()
     {
         var client = _factory.CreateClient();
@@ -33,14 +32,13 @@ public class ProductEndpointsTests : IntegrationTest
         response.EnsureSuccessStatusCode();
     }
     
-    [Theory]
+    [Theory, TestPriority(2)]
     [InlineData(2)]
     public async Task get_all_should_return_all_products(int count)
     {
-        await ResetAllDataAsync();
         var client = _factory.CreateClient();
 
-        var response = await client.GetAsync(Products.All.Uri());
+        var response = await client.GetAsync(Products.List.Uri());
         
         response.EnsureSuccessStatusCode();
         var content = await response.Content.ReadAsStringAsync();
@@ -49,14 +47,13 @@ public class ProductEndpointsTests : IntegrationTest
         result.Count.ShouldBe(count);
     }
     
-    [Theory]
+    [Theory, TestPriority(3)]
     [InlineData(2)]
     public async Task get_all_detail_should_return_all_products_detail(int count)
     {
-        await ResetAllDataAsync();
         var client = _factory.CreateClient();
 
-        var response = await client.GetAsync(Products.AllDetail.Uri());
+        var response = await client.GetAsync(Products.ListDetail.Uri());
        
         response.EnsureSuccessStatusCode();
         var content = await response.Content.ReadAsStringAsync();
@@ -66,7 +63,7 @@ public class ProductEndpointsTests : IntegrationTest
         result.Select(p => p.Owner).All(p => p != null).ShouldBeTrue();
     }
     
-    [Theory]
+    [Theory, TestPriority(4)]
     [InlineData(1, 1)]
     public async Task get_should_return_paginated_products(int pageIndex, int pageSize)
     {
@@ -83,7 +80,7 @@ public class ProductEndpointsTests : IntegrationTest
         result.Data.Count().ShouldBe(pageSize);
     }
 
-    [Theory]
+    [Theory, TestPriority(5)]
     [LoadData("product.Id")]
     public async Task get_by_id_should_return_product(ProductId id)
     {
@@ -97,7 +94,7 @@ public class ProductEndpointsTests : IntegrationTest
         result.ShouldNotBeNull();
     }
     
-    [Theory]
+    [Theory, TestPriority(6)]
     [LoadData("product.Id")]
     public async Task get_detail_by_id_should_return_product_detail(ProductId id)
     {
@@ -112,11 +109,11 @@ public class ProductEndpointsTests : IntegrationTest
         result.Owner.ShouldNotBeNull();
     }
 
-    [Theory]
+    [Theory, TestPriority(7)]
     [LoadData("product")]
     public async Task get_by_order_id_should_return_product_detail(Product product)
     {
-        var orderId = product.Orders.First().OrderId;
+        var orderId = product.Orders.First().Id;
         var client = _factory.CreateClient();
         
         var response = await client.GetAsync(Products.DetailByOrderId.Uri(orderId.Value));
@@ -128,25 +125,8 @@ public class ProductEndpointsTests : IntegrationTest
         result.Orders.Select(o => o.OrderId).ShouldContain(orderId.Value);
         result.Owner.ShouldNotBeNull();
     }
-    
-    [Theory]
-    [LoadData("product")]
-    public async Task get_by_centre_id_should_return_products_detail(Product product)
-    {
-        var centreId = product.Orders.First().CentreId;
-        var client = _factory.CreateClient();
-        
-        var response = await client.GetAsync(Products.DetailByCentreId.Uri(centreId.Value));
-        
-        response.EnsureSuccessStatusCode();
-        var content = await response.Content.ReadAsStringAsync();
-        var result = JsonConvert.DeserializeObject<List<ProductResponse>>(content);
-        result.ShouldNotBeNull();
-        result.ForEach(p => p.Orders.Select(o => o.CentreId).ShouldContain(centreId.Value));
-        result.Select(p => p.Owner).All(p => p != null).ShouldBeTrue();
-    }
-    
-    [Fact]
+
+    [Fact, TestPriority(8)]
     public async Task get_by_id_not_present_should_return_not_found()
     {
         var id = new ProductId(Guid.NewGuid().ToString());
@@ -157,18 +137,18 @@ public class ProductEndpointsTests : IntegrationTest
         response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
     }
 
-    [Theory]
+    [Theory, TestPriority(9)]
     [LoadData("product")]
     public async Task add_should_create_new_product(Product product)
     {
         var client = _factory.CreateClient();
-        var request = new PostProductRequest(
+        var request = new CreateProductRequest(
             Guid.NewGuid(),
             Guid.NewGuid().ToString(),
             product.Brand,
             product.Model);
         
-        var response = await client.PostAsJsonAsync(Products.Post.Uri(), request);
+        var response = await client.PostAsJsonAsync(Products.Create.Uri(), request);
 
         response.EnsureSuccessStatusCode();
         response.StatusCode.ShouldBe(HttpStatusCode.Created);
@@ -176,16 +156,16 @@ public class ProductEndpointsTests : IntegrationTest
     }
     
    
-    [Theory]
+    [Theory, TestPriority(10)]
     [LoadData("product")]
     public async Task patch_should_update_product(Product product)
     {
         var client = _factory.CreateClient();
         var productId = new ProductId("C");
-        var request = new PatchProductRequest(Guid.NewGuid(), product.Brand);
+        var request = new UpdateProductRequest(Guid.NewGuid(), product.Brand);
 
         var response = await client.PatchAsJsonAsync(
-            Host + Products.Patch.Uri(productId.Value), request);
+            Products.Update.Uri(productId.Value), request);
 
         response.EnsureSuccessStatusCode();
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
@@ -193,25 +173,25 @@ public class ProductEndpointsTests : IntegrationTest
         var content = await response.Content.ReadAsStringAsync();
         var result = JsonConvert.DeserializeObject<ProductResponse>(content);
         result.ShouldNotBeNull();
-        result.ProductId.ShouldBe(productId.Value);
+        result.Id.ShouldBe(productId.Value);
         result.Brand.ShouldBe(product.Brand);
     }
 
-    [Theory]
+    [Theory, TestPriority(11)]
     [LoadData("product")]
     public async Task get_events_by_id_should_return_product_events(Product product)
     {
         var client = _factory.CreateClient();
         var productId = new ProductId(Guid.NewGuid().ToString());
-        var postRequest = new PostProductRequest(
+        var postRequest = new CreateProductRequest(
             Guid.NewGuid(),
             productId.Value,
             product.Brand,
             product.Model);
-        var patchRequest = new PatchProductRequest(Guid.NewGuid(), owner: new Owner(product.OwnerId!.Value));
+        var patchRequest = new UpdateProductRequest(Guid.NewGuid(), owner: new Owner(product.OwnerId!.Value));
 
-        await client.PostAsJsonAsync(Products.Post.Uri(), postRequest);
-        await client.PatchAsJsonAsync(Host + Products.Patch.Uri(productId.Value), patchRequest);
+        await client.PostAsJsonAsync(Products.Create.Uri(), postRequest);
+        await client.PatchAsJsonAsync(Products.Update.Uri(productId.Value), patchRequest);
         var response = await client.GetAsync(Products.EventsById.Uri(productId.Value));
         
         response.EnsureSuccessStatusCode();
@@ -222,14 +202,13 @@ public class ProductEndpointsTests : IntegrationTest
         result.ProductOwnerChangedEvents.Last().OwnerId.ShouldBe(product.OwnerId!.Value);
     }
 
-    [Theory]
+    [Theory, TestPriority(12)]
     [InlineData("C")]
     public async Task activate_should_update_existing_product(string id)
     {
         var client = _factory.CreateClient();
-        var appUserId = Guid.NewGuid();
-
-        var response = await client.PatchAsync(Products.Activate.Uri(id) + $"?appUserId={appUserId}", null);
+        
+        var response = await client.PatchAsync(Products.Activate.Uri(id) + $"?activateBy={Guid.NewGuid()}", null);
 
         response.EnsureSuccessStatusCode();
         var content = await response.Content.ReadAsStringAsync();
@@ -238,14 +217,13 @@ public class ProductEndpointsTests : IntegrationTest
         result.IsActive.ShouldBeTrue();
     }
     
-    [Theory]
+    [Theory, TestPriority(13)]
     [InlineData("C")]
     public async Task deactivate_should_update_existing_product(string id)
     {
         var client = _factory.CreateClient();
-        var appUserId = Guid.NewGuid();
-
-        var response = await client.PatchAsync(Products.Deactivate.Uri(id) + $"?appUserId={appUserId}", null);
+        
+        var response = await client.PatchAsync(Products.Deactivate.Uri(id) + $"?deactivateBy={Guid.NewGuid()}", null);
 
         response.EnsureSuccessStatusCode();
         var content = await response.Content.ReadAsStringAsync();
@@ -254,14 +232,13 @@ public class ProductEndpointsTests : IntegrationTest
         result.IsActive.ShouldBeFalse();
     }
 
-    [Theory]
+    [Theory, TestPriority(14)]
     [InlineData("B")]
     public async Task delete_should_remove_existing_product(string id)
     {
         var client = _factory.CreateClient();
-        var appUserId = Guid.NewGuid();
-    
-        var response = await client.DeleteAsync(Products.Delete.Uri(id) + $"?appUserId={appUserId}");
+        
+        var response = await client.DeleteAsync(Products.Delete.Uri(id) + $"?deleteBy={Guid.NewGuid()}");
        
         response.EnsureSuccessStatusCode();
         response.StatusCode.ShouldBe(HttpStatusCode.NoContent);

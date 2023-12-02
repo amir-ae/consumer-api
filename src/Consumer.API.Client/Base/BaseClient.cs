@@ -111,6 +111,13 @@ public class BaseClient : IBaseClient
 
     public async Task<ErrorOr<T>> ErrorContent<T>(HttpResponseMessage response, CancellationToken ct = default)
     {
+        var statusCode = (int)response.StatusCode;
+        if ((int)response.StatusCode == StatusCodes.Status304NotModified)
+        {
+            return Error.Custom(StatusCodes.Status304NotModified, "NotModified", 
+                "Response is not modified");;
+        }
+        
         string? description;
         try
         {
@@ -118,7 +125,7 @@ public class BaseClient : IBaseClient
             try
             {
                 var problem = JsonConvert.DeserializeObject<ProblemDetails>(problemAsString)!;
-                if (problem.Status == (int)HttpStatusCode.BadRequest)
+                if (problem.Status == StatusCodes.Status400BadRequest)
                 {
                     try
                     {
@@ -143,11 +150,10 @@ public class BaseClient : IBaseClient
         {
             description = response.ReasonPhrase ?? string.Empty;
         }
-
-        var statusCode = (int)response.StatusCode;
+        
         switch (statusCode)
         {
-            case 400:
+            case StatusCodes.Status400BadRequest:
                 try
                 {
                     var errors = JsonConvert.DeserializeObject<Dictionary<string, string[]>>(description);
@@ -158,7 +164,7 @@ public class BaseClient : IBaseClient
                 {
                     return Error.Validation(statusCode.ToString(), description);
                 }
-            case 401:
+            case StatusCodes.Status401Unauthorized:
                 try
                 {
                     var errors = JsonConvert.DeserializeObject<Dictionary<string, string[]>>(description);
@@ -169,10 +175,10 @@ public class BaseClient : IBaseClient
                 {
                     return Error.Unauthorized(statusCode.ToString(), description);
                 }
-            case 404:
+            case StatusCodes.Status404NotFound:
                 return Error.NotFound(statusCode.ToString(), description);
-            case 409:
-            case 499:
+            case StatusCodes.Status409Conflict:
+            case StatusCodes.Status499ClientClosedRequest:
                 return Error.Conflict(statusCode.ToString(), description);
             default:
                 return Error.Failure(statusCode.ToString(), description);

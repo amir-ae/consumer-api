@@ -9,6 +9,7 @@ public class MartenTableMetaDataProduct : MartenTableMetaDataBase
     protected override void SetSpecificTableMetaData(StoreOptions storeOptions)
     {
         storeOptions.Schema.For<Product>().Identity(x => x.AggregateId);
+        storeOptions.Schema.For<Product>().UseNumericRevisions(true);
         storeOptions.Projections.Snapshot<Product>(SnapshotLifecycle.Inline);
     }
 }

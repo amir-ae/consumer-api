@@ -10,4 +10,5 @@ public record ProductsByPageQuery(
     int PageSize,
     int PageIndex,
     bool? NextPage,
-    ProductId? KeyId) : IRequest<ErrorOr<PaginatedList<ProductResponse>>>;
+    ProductId? KeyId,
+    CentreId? CentreId) : IRequest<ErrorOr<PaginatedList<ProductResponse>>>;

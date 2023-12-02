@@ -8,10 +8,7 @@ public sealed class ActivateProductCommandValidator : AbstractValidator<Activate
 {
     public ActivateProductCommandValidator(IValidatorChecks validatorChecks)
     {
-        RuleFor(x => x.AppUserId.Value).NotEmpty();
+        RuleFor(x => x.ActivateBy.Value).NotEmpty();
         RuleFor(x => x.ProductId.Value).NotEmpty();
-        RuleFor(x => x.ProductId)
-            .MustAsync(validatorChecks.ProductExists)
-            .WithMessage(x => $"{nameof(Product)} with id {x.ProductId} is not found.");
     }
 }

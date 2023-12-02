@@ -1,13 +1,12 @@
-﻿using Consumer.API.Contract.V1.Products.Responses;
-using MediatR;
+﻿using MediatR;
 using ErrorOr;
 using Consumer.Application.Common.Interfaces.Persistence;
-using Consumer.Domain.Products.Events;
-using Mapster;
+using Consumer.Domain.Products;
+using Consumer.Domain.Products.ValueObjects;
 
 namespace Consumer.Application.Products.Commands.Deactivate;
 
-public sealed class DeactivateProductCommandHandler : IRequestHandler<DeactivateProductCommand, ErrorOr<ProductResponse>>
+public sealed class DeactivateProductCommandHandler : IRequestHandler<DeactivateProductCommand, ErrorOr<Product>>
 {
     private readonly IProductRepository _productRepository;
 
@@ -16,16 +15,18 @@ public sealed class DeactivateProductCommandHandler : IRequestHandler<Deactivate
         _productRepository = productRepository;
     }
 
-    public async Task<ErrorOr<ProductResponse>> Handle(DeactivateProductCommand command, CancellationToken ct = default)
+    public async Task<ErrorOr<Product>> Handle(DeactivateProductCommand command, CancellationToken ct = default)
     {
-        var (appUserId, productId) = command;
+        var (productId, deactivateBy) = command;
 
-        var productDeactivatedEvent = new ProductDeactivatedEvent(
-            productId,
-            appUserId);
+        var product = await _productRepository.ByIdAsync(productId, ct);
+        if (product is null) return Error.NotFound(
+            nameof(ProductId), $"{nameof(Product)} with id {productId} is not found.");
 
-        var product = await _productRepository.DeactivateAsync(productDeactivatedEvent, ct);
+        product = product.Deactivate(deactivateBy, _productRepository.Append);
         
-        return product.Adapt<ProductResponse>();
+        await _productRepository.SaveChangesAsync(ct);
+        
+        return product;
     }
 }

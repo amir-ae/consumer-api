@@ -2,14 +2,13 @@
 
 namespace Consumer.Application.Products.Queries.ByPage;
 
-
 public sealed class ProductsByPageQueryValidator : AbstractValidator<ProductsByPageQuery>
 {
     public ProductsByPageQueryValidator()
     {
         RuleFor(x => x.PageIndex)
-            .NotEmpty();
+            .GreaterThan(0);
         RuleFor(x => x.PageSize)
-            .NotEmpty();
+            .GreaterThan(0);
     }
 }

@@ -21,7 +21,7 @@ public class ProductRepositoryTests : IntegrationTest
     [Fact]
     public async Task should_get_data()
     {
-        var result = await _sut.AllAsync();
+        var result = await _sut.ListAsync();
 
         result.ShouldNotBeNull();
     }
@@ -30,9 +30,7 @@ public class ProductRepositoryTests : IntegrationTest
     [InlineData(2)]
     public async Task should_get_all_records(int count)
     {
-        await ResetAllDataAsync();
-        
-        var result = await _sut.AllAsync();
+        var result = await _sut.ListAsync();
 
         result.ShouldNotBeNull();
         result.Count.ShouldBe(count);
@@ -44,7 +42,7 @@ public class ProductRepositoryTests : IntegrationTest
     {
         await ResetAllDataAsync();
         
-        var result = await _sut.AllDetailAsync();
+        var result = await _sut.ListDetailAsync();
 
         result.ShouldNotBeNull();
         result.Count.ShouldBe(count);
@@ -55,7 +53,7 @@ public class ProductRepositoryTests : IntegrationTest
     [InlineData("3")]
     public async Task should_not_return_deleted_records(string id)
     {
-        var result = await _sut.AllAsync();
+        var result = await _sut.ListAsync();
 
         result.Any(x => x.Id == new ProductId(id)).ShouldBeFalse();
     }
@@ -64,7 +62,7 @@ public class ProductRepositoryTests : IntegrationTest
     [LoadData("product")]
     public async Task should_return_record_detail_by_order_id(Product product)
     {
-        var orderId = product.Orders.First().OrderId;
+        var orderId = product.Orders.First().Id;
         
         var result = await _sut.DetailByOrderIdAsync(orderId);
 
@@ -165,7 +163,8 @@ public class ProductRepositoryTests : IntegrationTest
             new AppUserId(Guid.NewGuid())
         );
         
-        await _sut.UpdateAsync(productBrandChangedEvent);
+        _sut.Append(productBrandChangedEvent);
+        await _sut.SaveChangesAsync();
         var result = await _sut.ByIdAsync(productId);
 
         result.ShouldNotBeNull();
@@ -194,7 +193,8 @@ public class ProductRepositoryTests : IntegrationTest
         );
         
         await _sut.CreateAsync(productCreatedEvent);
-        await _sut.UpdateAsync(productOwnerChangedEvent);
+        _sut.Append(productOwnerChangedEvent);
+        await _sut.SaveChangesAsync();
         var result = await _sut.EventsByIdAsync(productId);
 
         result.ShouldNotBeNull();
@@ -206,12 +206,15 @@ public class ProductRepositoryTests : IntegrationTest
     [InlineData("C")]
     public async Task should_activate_product(string id)
     {
+        var productId = new ProductId(id);
         var productActivatedEvent = new ProductActivatedEvent(
-            new ProductId(id),
+            productId,
             new AppUserId(Guid.NewGuid())
         );
         
-        var result = await _sut.ActivateAsync(productActivatedEvent);
+        _sut.Append(productActivatedEvent);
+        await _sut.SaveChangesAsync();
+        var result = await _sut.ByIdAsync(productId);
         
         result.ShouldNotBeNull();
         result.IsActive.ShouldBe(true);
@@ -221,12 +224,15 @@ public class ProductRepositoryTests : IntegrationTest
     [InlineData("C")]
     public async Task should_deactivate_product(string id)
     {
+        var productId = new ProductId(id);
         var productDeactivatedEvent = new ProductDeactivatedEvent(
-            new ProductId(id),
+            productId,
             new AppUserId(Guid.NewGuid())
         );
         
-        var result = await _sut.DeactivateAsync(productDeactivatedEvent);
+        _sut.Append(productDeactivatedEvent);
+        await _sut.SaveChangesAsync();
+        var result = await _sut.ByIdAsync(productId);
         
         result.ShouldNotBeNull();
         result.IsActive.ShouldBe(false);
@@ -236,14 +242,19 @@ public class ProductRepositoryTests : IntegrationTest
     [InlineData("B")]
     public async Task should_delete_product(string id)
     {
+        var productId = new ProductId(id);
         var productDeletedEvent = new ProductDeletedEvent(
-            new ProductId(id),
+            productId,
             new AppUserId(Guid.NewGuid())
         );
         
-        var result = await _sut.DeleteAsync(productDeletedEvent);
+        _sut.Append(productDeletedEvent);
+        await _sut.SaveChangesAsync();
+        var result = await _sut.ByIdAsync(productId);
         
         result.ShouldNotBeNull();
         result.IsDeleted.ShouldBe(true);
+        
+        await ResetAllDataAsync();
     }
 }

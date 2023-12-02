@@ -1,6 +1,6 @@
 namespace Consumer.API.Contract.V1.Customers.Responses.Events;
 
-public sealed record CustomerNameChanged(string CustomerId,
+public record CustomerNameChanged(string CustomerId,
     string FirstName,
     string? MiddleName,
     string LastName,

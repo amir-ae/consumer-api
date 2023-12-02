@@ -8,10 +8,7 @@ public sealed class DeleteProductCommandValidator : AbstractValidator<DeleteProd
 {
     public DeleteProductCommandValidator(IValidatorChecks validatorChecks)
     {
-        RuleFor(x => x.AppUserId.Value).NotEmpty();
+        RuleFor(x => x.DeleteBy.Value).NotEmpty();
         RuleFor(x => x.ProductId.Value).NotEmpty();
-        RuleFor(x => x.ProductId)
-            .MustAsync(validatorChecks.ProductExists)
-            .WithMessage(x => $"{nameof(Product)} with id {x.ProductId} is not found.");
     }
 }

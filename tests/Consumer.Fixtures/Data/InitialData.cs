@@ -1,10 +1,9 @@
-﻿using Consumer.Domain.Common.Errors;
-using Consumer.Domain.Common.ValueObjects;
+﻿using Consumer.Domain.Common.ValueObjects;
 using Consumer.Domain.Customers;
 using Consumer.Domain.Customers.Events;
 using Consumer.Domain.Customers.ValueObjects;
 using Consumer.Domain.Products;
-using Consumer.Domain.Products.Entities;
+using Consumer.Domain.Common.Entities;
 using Consumer.Domain.Products.Events;
 using Consumer.Domain.Products.ValueObjects;
 using Marten;
@@ -24,8 +23,38 @@ public class InitialData: IInitialData
     public async Task Populate(IDocumentStore store, CancellationToken ct)
     {
         await using var session = store.LightweightSession();
-        // Marten UPSERT will cater for existing records
-        session.Store(_initialData);
+        
+        if (session.Query<Customer>().Any() || session.Query<Product>().Any())
+        {
+            await store.Advanced.Clean.CompletelyRemoveAllAsync(ct);
+        }
+
+        foreach (var @event in _initialData)
+        {
+            switch (@event)
+            {
+                case CustomerCreatedEvent created:
+                    session.Events.StartStream<Customer>(created.CustomerId.Value, created);
+                    break;
+                case ProductCreatedEvent created:
+                    session.Events.StartStream<Product>(created.ProductId.Value, created);
+                    break;
+            }
+        }
+        await session.SaveChangesAsync(ct);
+        
+        foreach (var @event in _initialData)
+        {
+            switch (@event)
+            {
+                case CustomerDeletedEvent deleted:
+                    session.Events.Append(deleted.CustomerId.Value, deleted);
+                    break;
+                case ProductDeletedEvent deleted:
+                    session.Events.Append(deleted.ProductId.Value, deleted);
+                    break;
+            }
+        }
         await session.SaveChangesAsync(ct);
     }
 }
@@ -34,7 +63,7 @@ public static class InitialDatasets
 {
     public static readonly object[] InitialData =
     {
-        Customer.Create(new CustomerCreatedEvent(
+        new CustomerCreatedEvent(
             new CustomerId("1"),
             "Rae",
             null,
@@ -45,9 +74,9 @@ public static class InitialDatasets
             "San Gregorio",
             null,
             new HashSet<ProductId> {new("A")},
-            new AppUserId(Guid.NewGuid()))
-        ),
-        Customer.Create(new CustomerCreatedEvent(
+            null,
+            new AppUserId(Guid.NewGuid())),
+        new CustomerCreatedEvent(
             new CustomerId("2"),
             "Aspen",
             null,
@@ -58,9 +87,9 @@ public static class InitialDatasets
             "Klerksdorp",
             null,
             new HashSet<ProductId> {new("B"), new("C")},
-            new AppUserId(Guid.NewGuid()))
-        ),
-        Customer.Create(new CustomerCreatedEvent(
+            null,
+            new AppUserId(Guid.NewGuid())),
+        new CustomerCreatedEvent(
             new CustomerId("3"),
             "Leonard",
             null,
@@ -71,12 +100,12 @@ public static class InitialDatasets
             "Inírida",
             null,
             null,
-            new AppUserId(Guid.NewGuid()))
-        ).Apply(new CustomerDeletedEvent(
+            null,
+            new AppUserId(Guid.NewGuid())),
+        new CustomerDeletedEvent(
             new CustomerId("3"),
-            new AppUserId(Guid.NewGuid()))
-        ),
-        Product.Create(new ProductCreatedEvent(
+            new AppUserId(Guid.NewGuid())),
+        new ProductCreatedEvent(
             new ProductId("A"),
             "TCL",
             "L40S60A",
@@ -96,9 +125,8 @@ public static class InitialDatasets
             null,
             null,
             null,
-            new AppUserId(Guid.NewGuid()))
-        ),
-        Product.Create(new ProductCreatedEvent(
+            new AppUserId(Guid.NewGuid())),
+        new ProductCreatedEvent(
             new ProductId("B"),
             "POLARLINE",
             "32PL13TC-SM",
@@ -118,9 +146,8 @@ public static class InitialDatasets
             null,
             null,
             null,
-            new AppUserId(Guid.NewGuid()))
-        ),
-        Product.Create(new ProductCreatedEvent(
+            new AppUserId(Guid.NewGuid())),
+        new ProductCreatedEvent(
             new ProductId("C"),
             "STARWIND",
             "SW-LED40BA201",
@@ -140,10 +167,9 @@ public static class InitialDatasets
             null,
             null,
             null,
+            new AppUserId(Guid.NewGuid())),
+        new ProductDeletedEvent(
+            new ProductId("C"),
             new AppUserId(Guid.NewGuid()))
-        ).Apply(new ProductDeletedEvent(
-            new ProductId("3"),
-            new AppUserId(Guid.NewGuid()))
-        )
     };
 }

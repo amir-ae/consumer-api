@@ -21,7 +21,7 @@ public class CustomerRepositoryTests : IntegrationTest
     [Fact]
     public async Task should_get_data()
     {
-        var result = await _sut.AllAsync();
+        var result = await _sut.ListAsync();
 
         result.ShouldNotBeNull();
     }
@@ -30,9 +30,7 @@ public class CustomerRepositoryTests : IntegrationTest
     [InlineData(2)]
     public async Task should_get_all_records(int count)
     {
-        await ResetAllDataAsync();
-        
-        var result = await _sut.AllAsync();
+        var result = await _sut.ListAsync();
 
         result.ShouldNotBeNull();
         result.Count.ShouldBe(count);
@@ -42,9 +40,7 @@ public class CustomerRepositoryTests : IntegrationTest
     [InlineData(2)]
     public async Task should_get_all_records_in_detail(int count)
     {
-        await ResetAllDataAsync();
-        
-        var result = await _sut.AllDetailAsync();
+        var result = await _sut.ListDetailAsync();
 
         result.ShouldNotBeNull();
         result.Count.ShouldBe(count);
@@ -55,7 +51,7 @@ public class CustomerRepositoryTests : IntegrationTest
     [InlineData("3")]
     public async Task should_not_return_deleted_records(string id)
     {
-        var result = await _sut.AllAsync();
+        var result = await _sut.ListAsync();
 
         result.Any(x => x.Id == new CustomerId(id)).ShouldBeFalse();
     }
@@ -98,7 +94,6 @@ public class CustomerRepositoryTests : IntegrationTest
     [LoadData("customer")]
     public async Task should_return_record_by_data(Customer customer)
     {
-        await ResetAllDataAsync();
         var result = await _sut.ByDataAsync(customer.FullName, customer.PhoneNumber);
 
         result.ShouldNotBeNull();
@@ -146,6 +141,7 @@ public class CustomerRepositoryTests : IntegrationTest
             customer.Address,
             null,
             customer.ProductIds,
+            null,
             new AppUserId(Guid.NewGuid())
         );
         
@@ -170,7 +166,8 @@ public class CustomerRepositoryTests : IntegrationTest
             new AppUserId(Guid.NewGuid())
         );
         
-        await _sut.UpdateAsync(customerNameChangedEvent);
+        _sut.Append(customerNameChangedEvent);
+        await _sut.SaveChangesAsync();
         var result = await _sut.ByIdAsync(customerId);
 
         result.ShouldNotBeNull();
@@ -196,6 +193,7 @@ public class CustomerRepositoryTests : IntegrationTest
             customer.Address,
             null,
             customer.ProductIds,
+            null,
             new AppUserId(Guid.NewGuid())
         );
         var customerRoleChangedEvent = new CustomerRoleChangedEvent(
@@ -205,7 +203,8 @@ public class CustomerRepositoryTests : IntegrationTest
         );
         
         await _sut.CreateAsync(customerCreatedEvent);
-        await _sut.UpdateAsync(customerRoleChangedEvent);
+        _sut.Append(customerRoleChangedEvent);
+        await _sut.SaveChangesAsync();
         var result = await _sut.EventsByIdAsync(customerId);
 
         result.ShouldNotBeNull();
@@ -217,12 +216,15 @@ public class CustomerRepositoryTests : IntegrationTest
     [InlineData("3")]
     public async Task should_activate_customer(string id)
     {
+        var customerId = new CustomerId(id);
         var customerActivatedEvent = new CustomerActivatedEvent(
-            new CustomerId(id),
+            customerId,
             new AppUserId(Guid.NewGuid())
         );
         
-        var result = await _sut.ActivateAsync(customerActivatedEvent);
+        _sut.Append(customerActivatedEvent);
+        await _sut.SaveChangesAsync();
+        var result = await _sut.ByIdAsync(customerId);
         
         result.ShouldNotBeNull();
         result.IsActive.ShouldBe(true);
@@ -232,12 +234,15 @@ public class CustomerRepositoryTests : IntegrationTest
     [InlineData("3")]
     public async Task should_deactivate_customer(string id)
     {
+        var customerId = new CustomerId(id);
         var customerDeactivatedEvent = new CustomerDeactivatedEvent(
-            new CustomerId(id),
+            customerId,
             new AppUserId(Guid.NewGuid())
         );
         
-        var result = await _sut.DeactivateAsync(customerDeactivatedEvent);
+        _sut.Append(customerDeactivatedEvent);
+        await _sut.SaveChangesAsync();
+        var result = await _sut.ByIdAsync(customerId);
         
         result.ShouldNotBeNull();
         result.IsActive.ShouldBe(false);
@@ -247,12 +252,15 @@ public class CustomerRepositoryTests : IntegrationTest
     [InlineData("2")]
     public async Task should_delete_customer(string id)
     {
+        var customerId = new CustomerId(id);
         var customerDeletedEvent = new CustomerDeletedEvent(
-            new CustomerId(id),
+            customerId,
             new AppUserId(Guid.NewGuid())
         );
         
-        var result = await _sut.DeleteAsync(customerDeletedEvent);
+        _sut.Append(customerDeletedEvent);
+        await _sut.SaveChangesAsync();
+        var result = await _sut.ByIdAsync(customerId);
         
         result.ShouldNotBeNull();
         result.IsDeleted.ShouldBe(true);

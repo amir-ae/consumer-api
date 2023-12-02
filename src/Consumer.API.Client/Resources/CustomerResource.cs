@@ -18,40 +18,48 @@ public class CustomerResource : ICustomerResource
     }
 
     public async Task<ErrorOr<PaginatedList<CustomerResponse>>> ByPage(int? pageSize, int? pageIndex, 
-        bool? nextPage = null, string? keyId = null, CancellationToken ct = default)
+        bool? nextPage = null, string? keyId = null, Guid? centreId = null, CancellationToken ct = default)
     {
         var queries = new Dictionary<string, string>();
         if (pageSize.HasValue) queries.Add(nameof(pageSize), pageSize.Value.ToString());
         if (pageIndex.HasValue) queries.Add(nameof(pageIndex), pageIndex.Value.ToString());
         if (nextPage.HasValue) queries.Add(nameof(nextPage), nextPage.Value.ToString());
         if (!string.IsNullOrWhiteSpace(keyId)) queries.Add(nameof(keyId), keyId);
+        if (centreId.HasValue) queries.Add(nameof(centreId), centreId.Value.ToString());
 
         var uri = _client.BuildUri(Customers.ByPage.Uri(), queries);
         return await _client.Get<PaginatedList<CustomerResponse>>(uri, ct);
     }
 
     public async Task<ErrorOr<PaginatedList<CustomerResponse>>> ByPageDetail(int? pageSize, int? pageIndex, 
-        bool? nextPage = null, string? keyId = null, CancellationToken ct = default)
+        bool? nextPage = null, string? keyId = null, Guid? centreId = null, CancellationToken ct = default)
     {
         var queries = new Dictionary<string, string>();
         if (pageSize.HasValue) queries.Add(nameof(pageSize), pageSize.Value.ToString());
         if (pageIndex.HasValue) queries.Add(nameof(pageIndex), pageIndex.Value.ToString());
         if (nextPage.HasValue) queries.Add(nameof(nextPage), nextPage.Value.ToString());
         if (!string.IsNullOrWhiteSpace(keyId)) queries.Add(nameof(keyId), keyId);
+        if (centreId.HasValue) queries.Add(nameof(centreId), centreId.Value.ToString());
 
         var uri = _client.BuildUri(Customers.ByPageDetail.Uri(), queries);
         return await _client.Get<PaginatedList<CustomerResponse>>(uri, ct);
     }
 
-    public async Task<ErrorOr<IList<CustomerForListingResponse>>> All(CancellationToken ct = default)
+    public async Task<ErrorOr<IList<CustomerForListingResponse>>> List(Guid? centreId = null, CancellationToken ct = default)
     {
-        var uri = _client.BuildUri(Customers.All.Uri());
+        var queries = new Dictionary<string, string>();
+        if (centreId.HasValue) queries.Add(nameof(centreId), centreId.Value.ToString());
+        
+        var uri = _client.BuildUri(Customers.List.Uri(), queries);
         return await _client.Get<IList<CustomerForListingResponse>>(uri, ct);
     }
     
-    public async Task<ErrorOr<IList<CustomerResponse>>> AllDetail(CancellationToken ct = default)
+    public async Task<ErrorOr<IList<CustomerResponse>>> ListDetail(Guid? centreId = null, CancellationToken ct = default)
     {
-        var uri = _client.BuildUri(Customers.AllDetail.Uri());
+        var queries = new Dictionary<string, string>();
+        if (centreId.HasValue) queries.Add(nameof(centreId), centreId.Value.ToString());
+        
+        var uri = _client.BuildUri(Customers.ListDetail.Uri(), queries);
         return await _client.Get<IList<CustomerResponse>>(uri, ct);
     }
 
@@ -73,35 +81,35 @@ public class CustomerResource : ICustomerResource
         return await _client.Get<CustomerEventsResponse>(uri, ct);
     }
 
-    public async Task<ErrorOr<CustomerResponse>> Post(PostCustomerRequest request, CancellationToken ct = default)
+    public async Task<ErrorOr<CustomerResponse>> Create(CreateCustomerRequest request, CancellationToken ct = default)
     {
-        var uri = _client.BuildUri(Customers.Post.Uri());
-        return await _client.PostAsJson<CustomerResponse, PostCustomerRequest>(uri, request, ct);
+        var uri = _client.BuildUri(Customers.Create.Uri());
+        return await _client.PostAsJson<CustomerResponse, CreateCustomerRequest>(uri, request, ct);
     }
     
-    public async Task<ErrorOr<CustomerResponse>> Patch(string customerId, PatchCustomerRequest request, CancellationToken ct = default)
+    public async Task<ErrorOr<CustomerResponse>> Update(string customerId, UpdateCustomerRequest request, CancellationToken ct = default)
     {
-        var uri = _client.BuildUri(Customers.Patch.Uri(customerId));
-        return await _client.PatchAsJson<CustomerResponse, PatchCustomerRequest>(uri, request, ct);
+        var uri = _client.BuildUri(Customers.Update.Uri(customerId));
+        return await _client.PatchAsJson<CustomerResponse, UpdateCustomerRequest>(uri, request, ct);
     }
 
-    public async Task<ErrorOr<CustomerResponse>> Activate(string customerId, Guid appUserId, CancellationToken ct = default)
+    public async Task<ErrorOr<CustomerResponse>> Activate(string customerId, Guid activateBy, CancellationToken ct = default)
     {
-        var queries = new Dictionary<string, string> { { nameof(appUserId), appUserId.ToString() } };
+        var queries = new Dictionary<string, string> { { nameof(activateBy), activateBy.ToString() } };
         var uri = _client.BuildUri(Customers.Activate.Uri(customerId), queries);
         return await _client.Patch<CustomerResponse>(uri, ct);
     }
 
-    public async Task<ErrorOr<CustomerResponse>> Deactivate(string customerId, Guid appUserId, CancellationToken ct = default)
+    public async Task<ErrorOr<CustomerResponse>> Deactivate(string customerId, Guid deactivateBy, CancellationToken ct = default)
     {
-        var queries = new Dictionary<string, string> { { nameof(appUserId), appUserId.ToString() } };
+        var queries = new Dictionary<string, string> { { nameof(deactivateBy), deactivateBy.ToString() } };
         var uri = _client.BuildUri(Customers.Deactivate.Uri(customerId), queries);
         return await _client.Patch<CustomerResponse>(uri, ct);
     }
 
-    public async Task<ErrorOr<CustomerResponse>> Delete(string customerId, Guid appUserId, CancellationToken ct = default)
+    public async Task<ErrorOr<CustomerResponse>> Delete(string customerId, Guid deleteBy, CancellationToken ct = default)
     {
-        var queries = new Dictionary<string, string> { { nameof(appUserId), appUserId.ToString() } };
+        var queries = new Dictionary<string, string> { { nameof(deleteBy), deleteBy.ToString() } };
         var uri = _client.BuildUri(Customers.Delete.Uri(customerId), queries);
         return await _client.Delete<CustomerResponse>(uri, ct);
     }

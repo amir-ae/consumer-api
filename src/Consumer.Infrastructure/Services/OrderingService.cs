@@ -14,13 +14,13 @@ public class OrderingService : IOrderingService
         _bus = bus;
     }
 
-    public async Task PublishCustomerUpdateAsync(CustomerUpdateMessage customerUpdateMessage, CancellationToken ct = default)
+    public async Task PublishCustomerUpdateAsync(CustomerUpdateMessage updateMessage, CancellationToken ct = default)
     {
-        await _bus.Publish(customerUpdateMessage, ct);
+        await _bus.Publish(updateMessage, ct);
     }
     
-    public async Task PublishProductUpdateAsync(ProductUpdateMessage productUpdateMessage, CancellationToken ct = default)
+    public async Task PublishProductUpdateAsync(ProductUpdateMessage updateMessage, CancellationToken ct = default)
     {
-        await _bus.Publish(productUpdateMessage, ct);
+        await _bus.Publish(updateMessage, ct);
     }
 }

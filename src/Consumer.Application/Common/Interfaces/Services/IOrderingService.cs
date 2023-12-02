@@ -5,6 +5,6 @@ namespace Consumer.Application.Common.Interfaces.Services;
 
 public interface IOrderingService
 {
-    Task PublishCustomerUpdateAsync(CustomerUpdateMessage customerUpdateMessage, CancellationToken ct = default);
-    Task PublishProductUpdateAsync(ProductUpdateMessage productUpdateMessage, CancellationToken ct = default);
+    Task PublishCustomerUpdateAsync(CustomerUpdateMessage updateMessage, CancellationToken ct = default);
+    Task PublishProductUpdateAsync(ProductUpdateMessage updateMessage, CancellationToken ct = default);
 }

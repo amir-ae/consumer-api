@@ -8,10 +8,7 @@ public sealed class DeleteCustomerCommandValidator : AbstractValidator<DeleteCus
 {
     public DeleteCustomerCommandValidator(IValidatorChecks validatorChecks)
     {
-        RuleFor(x => x.AppUserId.Value).NotEmpty();
+        RuleFor(x => x.DeleteBy.Value).NotEmpty();
         RuleFor(x => x.CustomerId.Value).NotEmpty();
-        RuleFor(x => x.CustomerId)
-            .MustAsync(validatorChecks.CustomerExists)
-            .WithMessage(x => $"{nameof(Customer)} with id {x.CustomerId} is not found.");
     }
 }

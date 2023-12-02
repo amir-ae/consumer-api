@@ -1,13 +1,17 @@
-﻿namespace Consumer.API.Contract.V1.Customers.Responses;
+﻿using Consumer.API.Contract.V1.Common;
+using Consumer.API.Contract.V1.Common.Responses;
 
-public sealed record CustomerForListingResponse(string CustomerId,
+namespace Consumer.API.Contract.V1.Customers.Responses;
+
+public record CustomerForListingResponse(string Id,
     string FirstName,
     string? MiddleName,
     string LastName,
     string FullName,
     string PhoneNumber,
-    CustomerCity City,
+    City City,
     string Address,
-    int Role,
+    CustomerRole Role,
     IList<string> ProductIds,
-    DateTimeOffset CreatedAt);
+    IList<Order> Orders,
+    DateTimeOffset CreatedAt) : ForListingResponse(CreatedAt);

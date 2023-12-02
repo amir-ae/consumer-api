@@ -82,8 +82,8 @@ public class EnrichmentService : IEnrichmentService
 
     public async Task FetchCatalogResources(CancellationToken ct = default)
     {
-        var citiesTask = _client.City.All(ct);
-        var serialsTask = _client.Serial.All(ct);
+        var citiesTask = _client.City.List(null, ct);
+        var serialsTask = _client.Serial.List(null, ct);
 
         await Task.WhenAll(citiesTask, serialsTask);
 
@@ -104,7 +104,7 @@ public class EnrichmentService : IEnrichmentService
     
     public async Task FetchCities(CancellationToken ct = default)
     {
-        var result = await _client.City.All(ct);
+        var result = await _client.City.List(null, ct);
         if (!result.IsError)
         {
             Cities = result.Value;
@@ -114,7 +114,7 @@ public class EnrichmentService : IEnrichmentService
     
     public async Task FetchSerials(CancellationToken ct = default)
     {
-        var result = await _client.Serial.All(ct);
+        var result = await _client.Serial.List(null, ct);
         if (!result.IsError)
         {
             Serials = result.Value;
@@ -134,7 +134,7 @@ public class EnrichmentService : IEnrichmentService
 
     private async ValueTask<CityResponse?> City(int cityId, CancellationToken ct = default)
     {
-        var city = Cities?.FirstOrDefault(c => c.CityId == cityId);
+        var city = Cities?.FirstOrDefault(c => c.Id == cityId);
         if (city is not null) return city;
 
         //CachedCities();
@@ -142,12 +142,12 @@ public class EnrichmentService : IEnrichmentService
         //if (city is not null) return city;
         
         await FetchCities(ct);
-        return Cities?.FirstOrDefault(c => c.CityId == cityId);
+        return Cities?.FirstOrDefault(c => c.Id == cityId);
     }
 
     private async ValueTask<SerialForListingResponse?> Serial(int serialId, CancellationToken ct = default)
     {
-        var serial = Serials?.FirstOrDefault(s => s.SerialId == serialId);
+        var serial = Serials?.FirstOrDefault(s => s.Id == serialId);
         if (serial is not null) return serial;
 
         //CachedSerials();
@@ -155,7 +155,7 @@ public class EnrichmentService : IEnrichmentService
         //if (serial is not null) return serial;
         
         await FetchSerials(ct);
-        return Serials?.FirstOrDefault(s => s.SerialId == serialId);
+        return Serials?.FirstOrDefault(s => s.Id == serialId);
     }
     
     private static CustomerResponse Map(CustomerResponse customer, CityResponse? city)
@@ -163,7 +163,7 @@ public class EnrichmentService : IEnrichmentService
         if (city is null) return customer;
         return customer with
         {
-            City = new CustomerCity(
+            City = new City(
                 customer.City.CityId,
                 city.Name,
                 city.Oblast,
@@ -176,7 +176,7 @@ public class EnrichmentService : IEnrichmentService
         if (city is null) return customer;
         return customer with
         {
-            City = new CustomerCity(
+            City = new City(
                 customer.City.CityId,
                 city.Name,
                 city.Oblast,
@@ -189,7 +189,7 @@ public class EnrichmentService : IEnrichmentService
         if (city is null) return @event;
         return @event with
         {
-            City = new CustomerCity(
+            City = new City(
                 @event.City.CityId,
                 city.Name,
                 city.Oblast,
@@ -197,26 +197,13 @@ public class EnrichmentService : IEnrichmentService
         };
     }
 
-    private static CustomerAddressChanged Map(CustomerAddressChanged @event, CityResponse? city)
-    {
-        if (city is null) return @event;
-        return @event with
-        {
-            City = new CustomerCity(
-                @event.City.CityId,
-                city.Name,
-                city.Oblast,
-                city.Code)
-        };
-    }
-    
     private static async ValueTask<CustomerAddressChanged> Map(CustomerAddressChanged @event, ValueTask<CityResponse?> cityTask)
     {
         var city = await cityTask;
         if (city is null) return @event;
         return @event with
         {
-            City = new CustomerCity(
+            City = new City(
                 @event.City.CityId,
                 city.Name,
                 city.Oblast,
@@ -229,7 +216,7 @@ public class EnrichmentService : IEnrichmentService
         if (serial is null) return product;
         return product with
         {
-            Serial = new ProductSerial(
+            Serial = new Serial(
                 serial.Brand,
                 serial.Model,
                 serial.Lot,

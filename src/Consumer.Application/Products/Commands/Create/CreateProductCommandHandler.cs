@@ -1,20 +1,19 @@
-﻿using Consumer.API.Contract.V1.Customers.Responses;
-using Consumer.API.Contract.V1.Products.Responses;
-using Consumer.Application.Common.Commands;
+﻿using Consumer.Application.Common.Commands;
 using MediatR;
 using ErrorOr;
 using Consumer.Application.Common.Interfaces.Persistence;
 using Consumer.Application.Customers.Commands.Create;
 using Consumer.Application.Customers.Commands.Update;
 using Consumer.Application.Products.Commands.Update;
+using Consumer.Domain.Customers;
 using Consumer.Domain.Customers.Events;
 using Consumer.Domain.Customers.ValueObjects;
+using Consumer.Domain.Products;
 using Consumer.Domain.Products.Events;
-using Mapster;
 
 namespace Consumer.Application.Products.Commands.Create;
 
-public sealed class CreateProductCommandHandler : IRequestHandler<CreateProductCommand, ErrorOr<ProductResponse>>
+public sealed class CreateProductCommandHandler : IRequestHandler<CreateProductCommand, ErrorOr<Product>>
 {
     private readonly IProductRepository _productRepository;
     private readonly ICustomerRepository _customerRepository;
@@ -27,23 +26,28 @@ public sealed class CreateProductCommandHandler : IRequestHandler<CreateProductC
         _mediator = mediator;
     }
 
-    public async Task<ErrorOr<ProductResponse>> Handle(CreateProductCommand command, CancellationToken ct = default)
+    public async Task<ErrorOr<Product>> Handle(CreateProductCommand command, CancellationToken ct = default)
     {
-        var (appUserId, productId, brand, model, serialId, owner, dealer, 
+        var (productId, brand, model, serialId, owner, dealer, 
             deviceType, panelModel, panelSerialNumber, warrantyCardNumber, 
             dateOfPurchase, invoiceNumber, purchasePrice, orders, unrepairable, 
-            dateOfDemandForCompensation, demanderFullName, createdAt) = command;
+            dateOfDemandForCompensation, demanderFullName, createBy, createAt) = command;
 
+        Func<ProductCreatedEvent, CancellationToken, Task<Product>> create = _productRepository.CreateAsync;
+        Action<ProductEvent, int?> append = _productRepository.Append;
+        Action<CustomerEvent, int?> customerAppend = _customerRepository.Append;
+        int? customerVersion = null;
+        
         var ownerId = owner?.CustomerId;
         var dealerId = dealer?.CustomerId;
 
         string? ownerName = null;
-        if (owner is not null)
+        if (owner is not null && !owner.IsId)
         {
+            Customer? newOwner;
             if (ownerId is null)
             {
-                var createCustomerCommand = new CreateCustomerCommand(
-                    appUserId,
+                var createCustomer = new CreateCustomerCommand(
                     owner.FirstName ?? string.Empty,
                     owner.MiddleName ?? string.Empty,
                     owner.LastName ?? string.Empty,
@@ -51,18 +55,21 @@ public sealed class CreateProductCommandHandler : IRequestHandler<CreateProductC
                     owner.CityId ?? new CityId(default),
                     owner.Address ?? string.Empty,
                     owner.Role,
-                    new HashSet<Product> { new (productId) },
-                    createdAt);
+                    new HashSet<UpsertProductCommand> { new (productId) },
+                    null,
+                    createBy,
+                    createAt);
                 
-                var ownerResult = await _mediator.Send(createCustomerCommand, ct);
-                ownerName = ownerResult.Value.FullName;
-                ownerId = new CustomerId(ownerResult.Value.CustomerId);
+                var createResult = await _mediator.Send(createCustomer, ct);
+                if (createResult.IsError) return createResult.Errors;
+                newOwner = createResult.Value;
+                ownerId = newOwner.Id;
             }
             else
             {
-                var updateCustomerCommand = new UpdateCustomerCommand(
-                    appUserId,
+                var updateCustomer = new UpdateCustomerCommand(
                     ownerId,
+                    
                     owner.FirstName,
                     owner.MiddleName,
                     owner.LastName,
@@ -70,30 +77,28 @@ public sealed class CreateProductCommandHandler : IRequestHandler<CreateProductC
                     owner.CityId,
                     owner.Address,
                     owner.Role,
-                    new HashSet<Product> { new (productId) },
-                    createdAt,
+                    new HashSet<UpsertProductCommand> { new (productId) },
+                    null,
+                    createBy,
+                    createAt,
                     true);
                 
-                var ownerResult = await _mediator.Send(updateCustomerCommand, ct);
-                ownerName = ownerResult.Value.FullName;
+                var updateResult = await _mediator.Send(updateCustomer, ct);
+                if (updateResult.IsError) return updateResult.Errors;
+                newOwner = updateResult.Value;
             }
-
-            var customerProductAddedEvent = new CustomerProductAddedEvent(
-                ownerId,
-                productId,
-                appUserId,
-                createdAt);
-        
-            await _customerRepository.UpdateAsync(customerProductAddedEvent, ct: ct);
+            
+            ownerName = newOwner.FullName;
+            newOwner.AddProduct(productId, createBy, createAt, customerAppend, ref customerVersion);
         }
         
         string? dealerName = null;
-        if (dealer is not null)
+        if (dealer is not null && !dealer.IsId)
         {
+            Customer? newDealer;
             if (dealerId is null)
             {
-                var createCustomerCommand = new CreateCustomerCommand(
-                    appUserId,
+                var createCustomer = new CreateCustomerCommand(
                     dealer.FirstName ?? string.Empty,
                     dealer.MiddleName ?? string.Empty,
                     dealer.LastName ?? string.Empty,
@@ -101,17 +106,19 @@ public sealed class CreateProductCommandHandler : IRequestHandler<CreateProductC
                     dealer.CityId ?? new CityId(default),
                     dealer.Address ?? string.Empty,
                     dealer.Role,
-                    new HashSet<Product> { new (productId) },
-                    createdAt);
+                    new HashSet<UpsertProductCommand> { new (productId) },
+                    null,
+                    createBy,
+                    createAt);
                 
-                var dealerResult = await _mediator.Send(createCustomerCommand, ct);
-                dealerName = dealerResult.Value.FullName;
-                dealerId = new CustomerId(dealerResult.Value.CustomerId);
+                var createResult = await _mediator.Send(createCustomer, ct);
+                if (createResult.IsError) return createResult.Errors;
+                newDealer = createResult.Value;
+                dealerId = newDealer.Id;
             }
             else
             {
-                var updateCustomerCommand = new UpdateCustomerCommand(
-                    appUserId,
+                var updateCustomer = new UpdateCustomerCommand(
                     dealerId,
                     dealer.FirstName,
                     dealer.MiddleName,
@@ -120,44 +127,33 @@ public sealed class CreateProductCommandHandler : IRequestHandler<CreateProductC
                     dealer.CityId,
                     dealer.Address,
                     dealer.Role,
-                    new HashSet<Product> { new (productId) },
-                    createdAt,
+                    new HashSet<UpsertProductCommand> { new (productId) },
+                    null,
+                    createBy,
+                    createAt,
                     true);
                 
-                var dealerResult = await _mediator.Send(updateCustomerCommand, ct);
-                dealerName = dealerResult.Value.FullName;
+                var updateResult = await _mediator.Send(updateCustomer, ct);
+                if (updateResult.IsError) return updateResult.Errors;
+                newDealer = updateResult.Value;
             }
 
-            var customerProductAddedEvent = new CustomerProductAddedEvent(
-                dealerId,
-                productId,
-                appUserId,
-                createdAt);
-        
-            await _customerRepository.UpdateAsync(customerProductAddedEvent, ct: ct);
+            dealerName = newDealer.FullName;
+            newDealer.AddProduct(productId, createBy, createAt, customerAppend, ref customerVersion);
         }
         
         var product = await _productRepository.ByIdAsync(productId, ct);
 
-        if (product is not null)
+        if (product is null)
         {
-            if (product.IsDeleted)
-            {
-                var productUndeletedEvent = new ProductUndeletedEvent(
-                    productId,
-                    appUserId,
-                    createdAt);
-
-                await _productRepository.UndeleteAsync(productUndeletedEvent, ct);
-            }
-            
-            var updateCommand = new UpdateProductCommand(
-                appUserId,
-                productId,
+            return await Product.CreateAsync(productId,
                 brand,
                 model,
-                new Customer(ownerId),
-                new Customer(dealerId),
+                serialId,
+                ownerId,
+                ownerName,
+                dealerId,
+                dealerName,
                 deviceType,
                 panelModel,
                 panelSerialNumber,
@@ -169,21 +165,20 @@ public sealed class CreateProductCommandHandler : IRequestHandler<CreateProductC
                 unrepairable,
                 dateOfDemandForCompensation,
                 demanderFullName,
-                createdAt,
-                true);
-                
-            return await _mediator.Send(updateCommand, ct);
+                createBy,
+                createAt,
+                create, 
+                ct);
         }
-
-        var productCreatedEvent = new ProductCreatedEvent(
+        
+        product.Undelete(createBy, append);
+            
+        var updateProduct = new UpdateProductCommand(
             productId,
             brand,
             model,
-            serialId,
-            ownerId,
-            ownerName,
-            dealerId,
-            dealerName,
+            ownerId is null ? null : new UpsertCustomerCommand(ownerId),
+            dealerId is null ? null : new UpsertCustomerCommand(dealerId),
             deviceType,
             panelModel,
             panelSerialNumber,
@@ -195,11 +190,10 @@ public sealed class CreateProductCommandHandler : IRequestHandler<CreateProductC
             unrepairable,
             dateOfDemandForCompensation,
             demanderFullName,
-            appUserId,
-            createdAt);
-        
-        var productResult = await _productRepository.CreateAsync(productCreatedEvent, ct);
-
-        return productResult.Adapt<ProductResponse>();
+            createBy,
+            createAt,
+            true);
+                
+        return await _mediator.Send(updateProduct, ct);
     }
 }

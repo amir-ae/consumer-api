@@ -1,24 +1,24 @@
-using Consumer.API.Contract.V1;
 using Consumer.API.Extensions.ErrorHandling;
 using Consumer.API.Contract.V1.Common.Responses;
 using Consumer.API.Contract.V1.Products.Requests;
 using Consumer.API.Contract.V1.Products.Responses;
+using Consumer.API.Extensions.ETag;
 using Consumer.Application.Products.Commands.Create;
 using Consumer.Application.Products.Commands.Delete;
 using Consumer.Application.Products.Commands.Update;
 using Consumer.Application.Products.Commands.Activate;
 using Consumer.Application.Products.Commands.Deactivate;
-using Consumer.Application.Products.Queries.All;
-using Consumer.Application.Products.Queries.AllDetail;
+using Consumer.Application.Products.Queries.List;
+using Consumer.Application.Products.Queries.ListDetail;
 using Consumer.Application.Products.Queries.ByPage;
 using Consumer.Application.Products.Queries.ById;
-using Consumer.Application.Products.Queries.DetailByCentreId;
 using Consumer.Application.Products.Queries.DetailById;
 using Consumer.Application.Products.Queries.DetailByOrderId;
 using Consumer.Application.Products.Queries.EventsById;
 using Consumer.Application.Products.Queries.ByPageDetail;
 using Consumer.Application.Products.Queries.CheckById;
 using Consumer.Domain.Common.ValueObjects;
+using Consumer.Domain.Products;
 using Consumer.Domain.Products.ValueObjects;
 using Mapster;
 using MediatR;
@@ -26,6 +26,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OutputCaching;
 using Products = Consumer.API.Contract.V1.Routes.Products;
 using Customers = Consumer.API.Contract.V1.Routes.Customers;
+using static Consumer.API.Extensions.ETag.ETagExtensions;
 
 namespace Consumer.API.Endpoints.V1;
 
@@ -36,54 +37,80 @@ public static class ProductEndpoints
         var productsGroup = app.MapGroup(Products.Prefix)
             //.RequireAuthorization()
             //.AddEndpointFilter<ApiKeyEndpointFilter>()
-            .WithTags(nameof(Products))
+            .AddEndpointFilter<ETagEndpointFilter<ProductResponse, ProductForListingResponse>>()
+            .WithTags(nameof(Product))
             .WithOpenApi();
 
         productsGroup.MapGet(Products.ByPage.Pattern,
                 async ([FromQuery] int? pageSize, [FromQuery] int? pageIndex, [FromQuery] bool? nextPage, 
-                    [FromQuery] string? keyId, ISender mediator, IErrorHandler errorHandler, CancellationToken ct) =>
+                    [FromQuery] string? keyId, [FromQuery] Guid? centreId, ISender mediator, IErrorHandler errorHandler, CancellationToken ct) =>
                 {
                     var query = new ProductsByPageQuery(pageSize ?? 10, pageIndex ?? 1, nextPage, 
-                        !string.IsNullOrWhiteSpace(keyId) ? new ProductId(keyId) : null);
+                        !string.IsNullOrWhiteSpace(keyId) ? new ProductId(keyId) : null,
+                        centreId.HasValue ? new CentreId(centreId.Value) : null);
                     var result = await mediator.Send(query, ct).DefaultIfCanceled();
                     return result.Match(Results.Ok, errorHandler.Problem);
-                }).Produces<PaginatedList<ProductResponse>>()
+                })
+            .Produces<PaginatedList<ProductResponse>>()
+            .Produces(StatusCodes.Status304NotModified)
+            .Produces<HttpValidationProblemDetails>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status499ClientClosedRequest)
+            .Produces(StatusCodes.Status500InternalServerError)
             .WithName(Products.ByPage.Name)
             .WithDescription(Products.ByPage.Description)
             .CacheOutput("Auth");
 
         productsGroup.MapGet(Products.ByPageDetail.Pattern,
                 async ([FromQuery] int? pageSize, [FromQuery] int? pageIndex, [FromQuery] bool? nextPage, 
-                    [FromQuery] string? keyId, ISender mediator, IErrorHandler errorHandler, CancellationToken ct) =>
+                    [FromQuery] string? keyId, [FromQuery] Guid? centreId, ISender mediator, IErrorHandler errorHandler, CancellationToken ct) =>
                 {
                     var query = new ProductsByPageDetailQuery(pageSize ?? 10, pageIndex ?? 1, nextPage, 
-                        !string.IsNullOrWhiteSpace(keyId) ? new ProductId(keyId) : null);
+                        !string.IsNullOrWhiteSpace(keyId) ? new ProductId(keyId) : null,
+                        centreId.HasValue ? new CentreId(centreId.Value) : null);
                     var result = await mediator.Send(query, ct).DefaultIfCanceled();
                     return result.Match(Results.Ok, errorHandler.Problem);
-                }).Produces<PaginatedList<ProductResponse>>()
+                })
+            .Produces<PaginatedList<ProductResponse>>()
+            .Produces(StatusCodes.Status304NotModified)
+            .Produces<HttpValidationProblemDetails>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status499ClientClosedRequest)
+            .Produces(StatusCodes.Status500InternalServerError)
             .WithName(Products.ByPageDetail.Name)
-            .WithDescription(Products.ByPageDetail.Description);
-
-        productsGroup.MapGet(Products.All.Pattern,
-                async (ISender mediator, IErrorHandler errorHandler, CancellationToken ct) =>
-                {
-                    var query = new AllProductsQuery();
-                    var result = await mediator.Send(query, ct).DefaultIfCanceled();
-                    return result.Match(Results.Ok, errorHandler.Problem);
-                }).Produces<List<ProductForListingResponse>>()
-            .WithName(Products.All.Name)
-            .WithDescription(Products.All.Description)
+            .WithDescription(Products.ByPageDetail.Description)
             .CacheOutput("Auth");
 
-        productsGroup.MapGet(Products.AllDetail.Pattern,
-                async (ISender mediator, IErrorHandler errorHandler, CancellationToken ct) =>
+        productsGroup.MapGet(Products.List.Pattern,
+                async ([FromQuery] Guid? centreId, ISender mediator, IErrorHandler errorHandler, CancellationToken ct) =>
                 {
-                    var query = new AllProductsDetailQuery();
+                    var query = new ListProductsQuery(centreId.HasValue ? new CentreId(centreId.Value) : null);
                     var result = await mediator.Send(query, ct).DefaultIfCanceled();
                     return result.Match(Results.Ok, errorHandler.Problem);
-                }).Produces<List<ProductResponse>>()
-            .WithName(Products.AllDetail.Name)
-            .WithDescription(Products.AllDetail.Description)
+                })
+            .Produces<List<ProductForListingResponse>>()
+            .Produces(StatusCodes.Status304NotModified)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status499ClientClosedRequest)
+            .Produces(StatusCodes.Status500InternalServerError)
+            .WithName(Products.List.Name)
+            .WithDescription(Products.List.Description)
+            .CacheOutput("Auth");
+
+        productsGroup.MapGet(Products.ListDetail.Pattern,
+                async ([FromQuery] Guid? centreId, ISender mediator, IErrorHandler errorHandler, CancellationToken ct) =>
+                {
+                    var query = new ListProductsDetailQuery(centreId.HasValue ? new CentreId(centreId.Value) : null);
+                    var result = await mediator.Send(query, ct).DefaultIfCanceled();
+                    return result.Match(Results.Ok, errorHandler.Problem);
+                })
+            .Produces<List<ProductResponse>>()
+            .Produces(StatusCodes.Status304NotModified)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status499ClientClosedRequest)
+            .Produces(StatusCodes.Status500InternalServerError)
+            .WithName(Products.ListDetail.Name)
+            .WithDescription(Products.ListDetail.Description)
             .CacheOutput("Auth");
 
         productsGroup.MapGet(Products.ById.Pattern,
@@ -92,7 +119,14 @@ public static class ProductEndpoints
                     var query = new ProductByIdQuery(new ProductId(productId));
                     var result = await mediator.Send(query, ct).DefaultIfCanceled();
                     return result.Match(Results.Ok, errorHandler.Problem);
-                }).Produces<ProductResponse>()
+                })
+            .Produces<ProductResponse>()
+            .Produces(StatusCodes.Status304NotModified)
+            .Produces<HttpValidationProblemDetails>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status499ClientClosedRequest)
+            .Produces(StatusCodes.Status500InternalServerError)
             .WithName(Products.ById.Name)
             .WithDescription(Products.ById.Description)
             .CacheOutput("Auth");
@@ -103,7 +137,14 @@ public static class ProductEndpoints
                     var query = new ProductDetailByIdQuery(new ProductId(productId));
                     var result = await mediator.Send(query, ct).DefaultIfCanceled();
                     return result.Match(Results.Ok, errorHandler.Problem);
-                }).Produces<ProductResponse>()
+                })
+            .Produces<ProductResponse>()
+            .Produces(StatusCodes.Status304NotModified)
+            .Produces<HttpValidationProblemDetails>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status499ClientClosedRequest)
+            .Produces(StatusCodes.Status500InternalServerError)
             .WithName(Products.DetailById.Name)
             .WithDescription(Products.DetailById.Description)
             .CacheOutput("Auth");
@@ -114,7 +155,13 @@ public static class ProductEndpoints
                     var query = new ProductEventsByIdQuery(new ProductId(productId));
                     var result = await mediator.Send(query, ct).DefaultIfCanceled();
                     return result.Match(Results.Ok, errorHandler.Problem);
-                }).Produces<ProductEventsResponse>()
+                })
+            .Produces<ProductEventsResponse>()
+            .Produces<HttpValidationProblemDetails>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status499ClientClosedRequest)
+            .Produces(StatusCodes.Status500InternalServerError)
             .WithName(Products.EventsById.Name)
             .WithDescription(Products.EventsById.Description);
         
@@ -124,20 +171,14 @@ public static class ProductEndpoints
                     var query = new CheckProductByIdQuery(new ProductId(productId));
                     var result = await mediator.Send(query, ct).DefaultIfCanceled();
                     return result.Match(Results.Ok, errorHandler.Problem);
-                }).Produces<bool>()
+                })
+            .Produces<bool>()
+            .Produces<HttpValidationProblemDetails>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status499ClientClosedRequest)
+            .Produces(StatusCodes.Status500InternalServerError)
             .WithName(Products.Check.Name)
             .WithDescription(Products.Check.Description);
-
-        productsGroup.MapGet(Products.DetailByCentreId.Pattern,
-                async ([FromRoute] Guid centreId, ISender mediator,
-                    IErrorHandler errorHandler, CancellationToken ct) =>
-                {
-                    var query = new ProductsDetailByCentreIdQuery(new CentreId(centreId));
-                    var result = await mediator.Send(query, ct).DefaultIfCanceled();;
-                    return result.Match(Results.Ok, errorHandler.Problem);
-                }).Produces<List<ProductResponse>>()
-            .WithName(Products.DetailByCentreId.Name)
-            .WithDescription(Products.DetailByCentreId.Description);
 
         productsGroup.MapGet(Products.DetailByOrderId.Pattern,
                 async ([FromRoute] string orderId, ISender mediator, IErrorHandler errorHandler,
@@ -146,12 +187,18 @@ public static class ProductEndpoints
                     var query = new ProductDetailByOrderIdQuery(new OrderId(orderId));
                     var result = await mediator.Send(query, ct).DefaultIfCanceled();
                     return result.Match(Results.Ok, errorHandler.Problem);
-                }).Produces<ProductResponse>()
+                })
+            .Produces<ProductResponse>()
+            .Produces<HttpValidationProblemDetails>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status499ClientClosedRequest)
+            .Produces(StatusCodes.Status500InternalServerError)
             .WithName(Products.DetailByOrderId.Name)
             .WithDescription(Products.DetailByOrderId.Description);
 
-        productsGroup.MapPost(Products.Post.Pattern,
-                async ([FromBody] PostProductRequest request, ISender mediator, IOutputCacheStore cache,
+        productsGroup.MapPost(Products.Create.Pattern,
+                async ([FromBody] CreateProductRequest request, ISender mediator, IOutputCacheStore cache,
                     IErrorHandler errorHandler, CancellationToken ct) =>
                 {
                     var command = request.Adapt<CreateProductCommand>();
@@ -160,68 +207,96 @@ public static class ProductEndpoints
                         {
                             await cache.EvictByTagAsync(nameof(Products), ct);
                             await cache.EvictByTagAsync(nameof(Customers), ct);
-                            return Results.Created(new Uri(Products.ById.Uri(product.ProductId), UriKind.Relative),
-                                product);
+                            return Results.Created(new Uri(Products.ById.Uri(product.Id.Value), UriKind.Relative),
+                                product.Adapt<ProductResponse>());
                         }, 
                         errors => Task.FromResult(errorHandler.Problem(errors)));
-                }).Produces<ProductResponse>(StatusCodes.Status201Created)
-            .WithName(Products.Post.Name)
-            .WithDescription(Products.Post.Description);
+                })
+            .Produces<ProductResponse>(StatusCodes.Status201Created)
+            .Produces<HttpValidationProblemDetails>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status499ClientClosedRequest)
+            .Produces(StatusCodes.Status500InternalServerError)
+            .WithName(Products.Create.Name)
+            .WithDescription(Products.Create.Description);
 
-        productsGroup.MapPatch(Products.Patch.Pattern,
-                async ([FromRoute] string productId, [FromBody] PatchProductRequest request, ISender mediator,
-                    IOutputCacheStore cache, IErrorHandler errorHandler, CancellationToken ct) =>
+        productsGroup.MapPatch(Products.Update.Pattern,
+                async ([FromRoute] string productId, [FromHeader(Name = "If-Match")] string? eTag, 
+                    [FromBody] UpdateProductRequest request, ISender mediator, IOutputCacheStore cache, 
+                    IErrorHandler errorHandler, CancellationToken ct) =>
                 {
-                    var command = request.Adapt<UpdateProductCommand>() with { ProductId = new ProductId(productId) };
+                    var command = request.Adapt<UpdateProductCommand>() with
+                    {
+                        ProductId = new ProductId(productId),
+                        Version = ToExpectedVersion(eTag)
+                    };
                     var result = await mediator.Send(command, ct).DefaultIfCanceled();
                     return await result.MatchAsync(async product =>
                         {
                             await cache.EvictByTagAsync(nameof(Products), ct);
                             await cache.EvictByTagAsync(nameof(Customers), ct);
-                            return Results.Ok(product);
+                            return Results.Ok(product.Adapt<ProductResponse>());
                         },
                         errors => Task.FromResult(errorHandler.Problem(errors)));
-                }).Produces<ProductResponse>()
-            .WithName(Products.Patch.Name)
-            .WithDescription(Products.Patch.Description);
+                })
+            .Produces<ProductResponse>()
+            .Produces<HttpValidationProblemDetails>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status499ClientClosedRequest)
+            .Produces(StatusCodes.Status500InternalServerError)
+            .WithName(Products.Update.Name)
+            .WithDescription(Products.Update.Description);
 
         productsGroup.MapPatch(Products.Activate.Pattern,
-                async ([FromRoute] string productId, [FromQuery] Guid appUserId, ISender mediator,
+                async ([FromRoute] string productId, [FromQuery] Guid activateBy, ISender mediator,
                     IOutputCacheStore cache, IErrorHandler errorHandler, CancellationToken ct) =>
                 {
-                    var command = new ActivateProductCommand(new AppUserId(appUserId), new ProductId(productId));
+                    var command = new ActivateProductCommand(new ProductId(productId), new AppUserId(activateBy));
                     var result = await mediator.Send(command, ct).DefaultIfCanceled();
                     return await result.MatchAsync(async product =>
                     {
                         await cache.EvictByTagAsync(nameof(Products), ct);
-                        return Results.Ok(product);
+                        return Results.Ok(product.Adapt<ProductResponse>());
                     },
                         errors => Task.FromResult(errorHandler.Problem(errors)));
-                }).Produces<ProductResponse>()
+                })
+            .Produces<ProductResponse>()
+            .Produces<HttpValidationProblemDetails>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status499ClientClosedRequest)
+            .Produces(StatusCodes.Status500InternalServerError)
             .WithName(Products.Activate.Name)
             .WithDescription(Products.Activate.Description);
 
         productsGroup.MapPatch(Products.Deactivate.Pattern,
-                async ([FromRoute] string productId, [FromQuery] Guid appUserId, ISender mediator,
+                async ([FromRoute] string productId, [FromQuery] Guid deactivateBy, ISender mediator,
                     IOutputCacheStore cache, IErrorHandler errorHandler, CancellationToken ct) =>
                 {
-                    var command = new DeactivateProductCommand(new AppUserId(appUserId), new ProductId(productId));
+                    var command = new DeactivateProductCommand(new ProductId(productId), new AppUserId(deactivateBy));
                     var result = await mediator.Send(command, ct).DefaultIfCanceled();
                     return await result.MatchAsync(async product =>
                     {
                         await cache.EvictByTagAsync(nameof(Products), ct);
-                        return Results.Ok(product);
+                        return Results.Ok(product.Adapt<ProductResponse>());
                     },
                         errors => Task.FromResult(errorHandler.Problem(errors)));
-                }).Produces<ProductResponse>()
+                })
+            .Produces<ProductResponse>()
+            .Produces<HttpValidationProblemDetails>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status499ClientClosedRequest)
+            .Produces(StatusCodes.Status500InternalServerError)
             .WithName(Products.Deactivate.Name)
             .WithDescription(Products.Deactivate.Description);
 
         productsGroup.MapDelete(Products.Delete.Pattern,
-                async ([FromRoute] string productId, [FromQuery] Guid appUserId, ISender mediator,
+                async ([FromRoute] string productId, [FromQuery] Guid deleteBy, ISender mediator,
                     IOutputCacheStore cache, IErrorHandler errorHandler, CancellationToken ct) =>
                 {
-                    var command = new DeleteProductCommand(new AppUserId(appUserId), new ProductId(productId));
+                    var command = new DeleteProductCommand(new ProductId(productId), new AppUserId(deleteBy));
                     var result = await mediator.Send(command, ct).DefaultIfCanceled();
                     return await result.MatchAsync(async _ =>
                         {
@@ -230,7 +305,13 @@ public static class ProductEndpoints
                             return Results.NoContent();
                         },
                         errors => Task.FromResult(errorHandler.Problem(errors)));
-                }).Produces(StatusCodes.Status204NoContent)
+                })
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces<HttpValidationProblemDetails>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status499ClientClosedRequest)
+            .Produces(StatusCodes.Status500InternalServerError)
             .WithName(Products.Delete.Name)
             .WithDescription(Products.Delete.Description);
     }

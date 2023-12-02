@@ -2,7 +2,7 @@ using Consumer.API.Contract.V1.Products.Responses.Events;
 
 namespace Consumer.API.Contract.V1.Products.Responses;
 
-public sealed record ProductEventsResponse(ProductCreated ProductCreatedEvent,
+public record ProductEventsResponse(ProductCreated ProductCreatedEvent,
     IList<ProductBrandChanged> ProductBrandChangedEvents,
     IList<ProductModelChanged> ProductModelChangedEvents,
     IList<ProductOwnerChanged> ProductOwnerChangedEvents,

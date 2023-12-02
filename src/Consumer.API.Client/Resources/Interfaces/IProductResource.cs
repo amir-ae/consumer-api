@@ -8,20 +8,19 @@ namespace Consumer.API.Client.Resources.Interfaces;
 public interface IProductResource
 {
     Task<ErrorOr<PaginatedList<ProductResponse>>> ByPage(int? pageSize, int? pageIndex, bool? nextPage = null, 
-        string? keyId = null, CancellationToken ct = default);
+        string? keyId = null, Guid? centreId = null, CancellationToken ct = default);
     Task<ErrorOr<PaginatedList<ProductResponse>>> ByPageDetail(int? pageSize, int? pageIndex, bool? nextPage = null, 
-        string? keyId = null, CancellationToken ct = default);
-    Task<ErrorOr<IList<ProductForListingResponse>>> All(CancellationToken ct = default);
-    Task<ErrorOr<IList<ProductResponse>>> AllDetail(CancellationToken ct = default);
-    Task<ErrorOr<IList<ProductResponse>>> DetailByCentreId(Guid centreId, CancellationToken ct = default);
-    Task<ErrorOr<ProductResponse>> DetailByOrderId(string orderId, CancellationToken ct = default);
+        string? keyId = null, Guid? centreId = null, CancellationToken ct = default);
+    Task<ErrorOr<IList<ProductForListingResponse>>> List(Guid? centreId = null, CancellationToken ct = default);
+    Task<ErrorOr<IList<ProductResponse>>> ListDetail(Guid? centreId = null, CancellationToken ct = default);
     Task<ErrorOr<ProductResponse>> ById(string productId, CancellationToken ct = default);
     Task<ErrorOr<ProductResponse>> DetailById(string productId, CancellationToken ct = default);
     Task<ErrorOr<ProductEventsResponse>> EventsById(string productId, CancellationToken ct = default);
     Task<ErrorOr<bool>> CheckById(string productId, CancellationToken ct = default);
-    Task<ErrorOr<ProductResponse>> Post(PostProductRequest request, CancellationToken ct = default);
-    Task<ErrorOr<ProductResponse>> Patch(string productId, PatchProductRequest request, CancellationToken ct = default);
-    Task<ErrorOr<ProductResponse>> Activate(string productId, Guid appUserId, CancellationToken ct = default);
-    Task<ErrorOr<ProductResponse>> Deactivate(string productId, Guid appUserId, CancellationToken ct = default);
-    Task<ErrorOr<ProductResponse>> Delete(string productId, Guid appUserId, CancellationToken ct = default);
+    Task<ErrorOr<ProductResponse>> DetailByOrderId(string orderId, CancellationToken ct = default);
+    Task<ErrorOr<ProductResponse>> Create(CreateProductRequest request, CancellationToken ct = default);
+    Task<ErrorOr<ProductResponse>> Update(string productId, UpdateProductRequest request, CancellationToken ct = default);
+    Task<ErrorOr<ProductResponse>> Activate(string productId, Guid activateBy, CancellationToken ct = default);
+    Task<ErrorOr<ProductResponse>> Deactivate(string productId, Guid deactivateBy, CancellationToken ct = default);
+    Task<ErrorOr<ProductResponse>> Delete(string productId, Guid deleteBy, CancellationToken ct = default);
 }

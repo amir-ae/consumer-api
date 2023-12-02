@@ -21,10 +21,11 @@ public sealed class ProductDetailByIdQueryHandler : IRequestHandler<ProductDetai
 
     public async Task<ErrorOr<ProductResponse>> Handle(ProductDetailByOrderIdQuery query, CancellationToken ct = default)
     {
-        var product = await _productRepository.DetailByOrderIdAsync(query.OrderId, ct);
+        var orderId = query.OrderId;
+        var product = await _productRepository.DetailByOrderIdAsync(orderId, ct);
 
         if (product is null) return Error.NotFound(
-            nameof(query.OrderId), $"{nameof(Product)} with order id {query.OrderId} is not found.");
+            nameof(query.OrderId), $"{nameof(Product)} with order id {orderId.Value} is not found.");
 
         var productResult = product.Adapt<ProductResponse>();
         

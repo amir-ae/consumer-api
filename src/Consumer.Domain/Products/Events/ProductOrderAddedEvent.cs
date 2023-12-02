@@ -1,6 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using Consumer.Domain.Common.ValueObjects;
-using Consumer.Domain.Products.Entities;
+using Consumer.Domain.Common.Entities;
 using Consumer.Domain.Products.ValueObjects;
 
 namespace Consumer.Domain.Products.Events;

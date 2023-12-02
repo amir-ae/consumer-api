@@ -1,5 +1,6 @@
 ﻿using Consumer.API.Contract.V1.Products.Responses;
 using Consumer.Application.Common.Interfaces.Persistence;
+using Consumer.Domain.Products;
 using MediatR;
 using ErrorOr;
 using Mapster;
@@ -21,6 +22,9 @@ public sealed class ProductEventsByIdQueryHandler : IRequestHandler<ProductEvent
         
         var productEvents = await _productRepository.EventsByIdAsync(productId, ct);
 
+        if (productEvents is null) return Error.NotFound(
+            nameof(query.ProductId), $"{nameof(Product)} events with id {productId.Value} is not found.");
+        
         return productEvents.Adapt<ProductEventsResponse>();
     }
 }

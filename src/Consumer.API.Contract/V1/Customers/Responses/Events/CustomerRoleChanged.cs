@@ -1,6 +1,8 @@
+using Consumer.API.Contract.V1.Common;
+
 namespace Consumer.API.Contract.V1.Customers.Responses.Events;
 
-public sealed record CustomerRoleChanged(string CustomerId,
-    int Role,
+public record CustomerRoleChanged(string CustomerId,
+    CustomerRole Role,
     Guid ChangedBy,
     DateTimeOffset ChangedAt);

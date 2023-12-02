@@ -8,6 +8,7 @@ using Consumer.Domain.Customers;
 using Consumer.Domain.Customers.Events;
 using Consumer.Domain.Customers.ValueObjects;
 using Consumer.Domain.Products;
+using Consumer.Domain.Products.ValueObjects;
 using Consumer.Infrastructure.Persistence.Extensions;
 
 namespace Consumer.Infrastructure.Persistence.Repositories;
@@ -74,8 +75,7 @@ public class CustomerRepository : ICustomerRepository
         if (customer is null || !customer.ProductIds.Any()) return customer;
         var productIds = customer.ProductIds.Select(id => id.Value);
         var products = await _session.LoadManyAsync<Product>(ct, productIds);
-        customer.Products = products.ToHashSet();
-        return customer;
+        return customer.AddProducts(products.ToHashSet());
     }
 
     public async Task<List<Customer>> DetailByIdsAsync(List<CustomerId> ids, CancellationToken ct = default)
@@ -87,25 +87,39 @@ public class CustomerRepository : ICustomerRepository
         return await AddProductDetailToCustomers(customers, products);
     }
     
-    public async Task<CustomerEvents> EventsByIdAsync(CustomerId id, CancellationToken ct = default)
+    public async Task<CustomerEvents?> EventsByIdAsync(CustomerId id, CancellationToken ct = default)
     {
         var events = (await _session.Events.FetchStreamAsync(id.Value, token: ct)).ToList();
-        var createdEvent = events.First(x => x.EventType == typeof(CustomerCreatedEvent)).Data as CustomerCreatedEvent;
-        return events.Sort(new CustomerEvents(createdEvent!));
+        var createdEvent = events.FirstOrDefault(x => x.EventType == typeof(CustomerCreatedEvent))?.Data as CustomerCreatedEvent;
+        if (createdEvent is null) return null;
+        return events.Sort(new CustomerEvents(createdEvent));
     }
     
     public class ByPageQuery : ICompiledListQuery<Customer>
     {
         public Expression<Func<IMartenQueryable<Customer>, IEnumerable<Customer>>> QueryIs()
         {
-            return q => q.Where(x => x.IsDeleted != true)
+            return q => q.Where(x => !x.IsDeleted)
+                .OrderByDescending(x => x.CreatedAt)
+                .ThenByDescending(x => x.LastModifiedAt);
+        }
+    }
+    
+    public class ByCentrePageQuery : ICompiledListQuery<Customer>
+    {
+        public Guid CentreId { get; init; }
+
+        public Expression<Func<IMartenQueryable<Customer>, IEnumerable<Customer>>> QueryIs()
+        {
+            return q => q.Where(x => !x.IsDeleted 
+                                     && x.Orders.Any(o => o.CentreId.Value == CentreId))
                 .OrderByDescending(x => x.CreatedAt)
                 .ThenByDescending(x => x.LastModifiedAt);
         }
     }
 
     public async Task<(List<Customer>, long)> ByPageAsync(int pageSize, int pageIndex, bool? nextPage, CustomerId? keyId, 
-        CancellationToken ct = default)
+        CentreId? centreId, CancellationToken ct = default)
     {
         List<Customer> customers;
         long totalCount;
@@ -113,13 +127,15 @@ public class CustomerRepository : ICustomerRepository
         if (!nextPage.HasValue || keyId is null || !await CheckByIdAsync(keyId, ct))
         {
             var result = await _session.Query<Customer>()
-                .Where(c => c.IsDeleted != true)
+                .Where(centreId is null
+                    ? c => !c.IsDeleted
+                    : c => !c.IsDeleted && c.Orders.Any(o => o.CentreId.Value == centreId.Value))
                 .OrderByDescending(c => c.CreatedAt)
                 .ThenByDescending(c => c.LastModifiedAt)
                 .ToPagedListAsync(pageIndex, pageSize, token: ct);
 
-            totalCount = result.TotalItemCount;
             customers = result.ToList();
+            totalCount = result.TotalItemCount;
         }
         else
         {
@@ -127,7 +143,9 @@ public class CustomerRepository : ICustomerRepository
             
             if (nextPage == true)
             {
-                var result = (await _session.QueryAsync(new ByPageQuery(), ct)).ToList();
+                var result = centreId is null
+                    ? (await _session.QueryAsync(new ByPageQuery(), ct)).ToList()
+                    : (await _session.QueryAsync(new ByCentrePageQuery { CentreId = centreId.Value }, ct)).ToList();
 
                 totalCount = result.Count;
                 customers = result
@@ -138,7 +156,9 @@ public class CustomerRepository : ICustomerRepository
             }
             else
             {
-                var result = (await _session.QueryAsync(new ByPageQuery(), ct)).Reverse().ToList();
+                var result = centreId is null
+                    ? (await _session.QueryAsync(new ByPageQuery(), ct)).Reverse().ToList()
+                    : (await _session.QueryAsync(new ByCentrePageQuery { CentreId = centreId.Value }, ct)).Reverse().ToList();
 
                 totalCount = result.Count;
                 customers = result
@@ -154,9 +174,9 @@ public class CustomerRepository : ICustomerRepository
     }
 
     public async Task<(List<Customer>, long)> ByPageDetailAsync(int pageSize, int pageIndex, bool? nextPage, 
-        CustomerId? keyId, CancellationToken ct = default)
+        CustomerId? keyId, CentreId? centreId, CancellationToken ct = default)
     {
-        var (customers, totalCount) = await ByPageAsync(pageSize, pageIndex, nextPage, keyId, ct);
+        var (customers, totalCount) = await ByPageAsync(pageSize, pageIndex, nextPage, keyId, centreId, ct);
 
         var productIds = customers.SelectMany(c => c.ProductIds).Select(id => id.Value);
         var products = (await _session.LoadManyAsync<Product>(ct, productIds)).ToList();
@@ -164,37 +184,68 @@ public class CustomerRepository : ICustomerRepository
         return (await AddProductDetailToCustomers(customers, products), totalCount);
     }
 
-    public class AllQuery : ICompiledListQuery<Customer>
+    public class ListQuery : ICompiledListQuery<Customer>
     {
         public Expression<Func<IMartenQueryable<Customer>, IEnumerable<Customer>>> QueryIs()
         {
-            return q => q.Where(x => x.IsDeleted != true)
+            return q => q.Where(x => !x.IsDeleted)
                 .OrderByDescending(x => x.CreatedAt)
                 .ThenByDescending(x => x.LastModifiedAt);
         }
     }
     
-    public async Task<List<Customer>> AllAsync(CancellationToken ct = default)
+    public class ByCentreIdQuery : ICompiledListQuery<Customer>
     {
-        var customers = await _session.QueryAsync(new AllQuery(), ct);
+        public Guid CentreId { get; init; }
+        
+        public Expression<Func<IMartenQueryable<Customer>, IEnumerable<Customer>>> QueryIs()
+        {
+            return q => q.Where(x => !x.IsDeleted 
+                                     && x.Orders.Any(o => o.CentreId.Value == CentreId))
+                .OrderByDescending(x => x.CreatedAt)
+                .ThenByDescending(x => x.LastModifiedAt);
+        }
+    }
+    
+    public async Task<List<Customer>> ListAsync(CentreId? centreId = null, CancellationToken ct = default)
+    {
+        var customers = centreId is null
+            ? await _session.QueryAsync(new ListQuery(), ct)
+            : await _session.QueryAsync(new ByCentreIdQuery { CentreId = centreId.Value }, ct);
+        
         return customers.ToList();
     }
     
-    public class AllProductsQuery : ICompiledListQuery<Product>
+    public class ListProductsQuery : ICompiledListQuery<Product>
     {
         public Expression<Func<IMartenQueryable<Product>, IEnumerable<Product>>> QueryIs()
         {
-            return q => q.Where(x => x.IsDeleted != true)
+            return q => q.Where(x => !x.IsDeleted)
                 .OrderByDescending(x => x.CreatedAt)
                 .ThenByDescending(x => x.LastModifiedAt);
         }
     }
     
-    public async Task<List<Customer>> AllDetailAsync(CancellationToken ct = default)
+    public class ByCentreIdProductsQuery : ICompiledListQuery<Product>
+    {
+        public Guid CentreId { get; init; }
+        
+        public Expression<Func<IMartenQueryable<Product>, IEnumerable<Product>>> QueryIs()
+        {
+            return q => q.Where(x => !x.IsDeleted 
+                                     && x.Orders.Any(o => o.CentreId.Value == CentreId))
+                .OrderByDescending(x => x.CreatedAt)
+                .ThenByDescending(x => x.LastModifiedAt);
+        }
+    }
+
+    public async Task<List<Customer>> ListDetailAsync(CentreId? centreId = null, CancellationToken ct = default)
     {
         var batch = _session.CreateBatchQuery();
-        var customersTask = batch.Query(new AllQuery());
-        var productsTask = batch.Query(new AllProductsQuery());
+        var customersTask = centreId is null ? batch.Query(new ListQuery()) 
+            : batch.Query(new ByCentreIdQuery { CentreId = centreId.Value });
+        var productsTask = centreId is null ? batch.Query(new ListProductsQuery())
+            : batch.Query(new ByCentreIdProductsQuery { CentreId = centreId.Value });
         await batch.Execute(ct);
 
         var customers = await customersTask;
@@ -211,78 +262,36 @@ public class CustomerRepository : ICustomerRepository
         return (await _session.LoadAsync<Customer>(customerId, ct))!;
     }
 
-    public async Task<Customer> UpdateAsync(CustomerEvent customerEvent, Customer? customer = null, CancellationToken ct = default)
+    public void Append(CustomerEvent customerEvent, int? version = null)
     {
         var customerId = customerEvent.CustomerId.Value;
-        if (customer is null)
+        
+        if (version.HasValue)
         {
-            var stream = await _session.Events.FetchForWriting<Customer>(customerId, ct);
-            stream.AppendOne(customerEvent);
-            await _session.SaveChangesAsync(ct);
-            customer = stream.Aggregate;
+            _session.Events.WriteToAggregate<Customer>(customerId, version.Value, stream
+                => stream.AppendOne(customerEvent));
         }
         else
         {
             _session.Events.Append(customerId, customerEvent);
         }
-
-        return customerEvent switch
-        {
-            CustomerNameChangedEvent e => customer.Apply(e),
-            CustomerPhoneNumberChangedEvent e => customer.Apply(e),
-            CustomerAddressChangedEvent e => customer.Apply(e),
-            CustomerRoleChangedEvent e => customer.Apply(e),
-            CustomerProductAddedEvent e => customer.Apply(e),
-            CustomerProductRemovedEvent e => customer.Apply(e),
-            _ => customer
-        };
-    }
-    
-    public async Task<Customer> ActivateAsync(CustomerActivatedEvent customerActivatedEvent, CancellationToken ct = default)
-    {
-        var customerId = customerActivatedEvent.CustomerId.Value;
-        var stream = await _session.Events.FetchForWriting<Customer>(customerId, ct);
-        stream.AppendOne(customerActivatedEvent);
-        await _session.SaveChangesAsync(ct);
-        return stream.Aggregate.Apply(customerActivatedEvent);
     }
 
-    public async Task<Customer> DeactivateAsync(CustomerDeactivatedEvent customerDeactivatedEvent, CancellationToken ct = default)
-    {
-        var customerId = customerDeactivatedEvent.CustomerId.Value;
-        var stream = await _session.Events.FetchForWriting<Customer>(customerId, ct);
-        stream.AppendOne(customerDeactivatedEvent);
-        await _session.SaveChangesAsync(ct);
-        return stream.Aggregate.Apply(customerDeactivatedEvent);
-    }
-
-    public async Task<Customer> DeleteAsync(CustomerDeletedEvent customerDeletedEvent, CancellationToken ct = default)
-    {
-        var customerId = customerDeletedEvent.CustomerId.Value;
-        var stream = await _session.Events.FetchForWriting<Customer>(customerId, ct);
-        stream.AppendOne(customerDeletedEvent);
-        await _session.SaveChangesAsync(ct);
-        return stream.Aggregate.Apply(customerDeletedEvent);
-    }
-
-    public async Task<Customer> UndeleteAsync(CustomerUndeletedEvent customerUndeletedEvent, CancellationToken ct = default)
-    {
-        var customerId = customerUndeletedEvent.CustomerId.Value;
-        var stream = await _session.Events.FetchForWriting<Customer>(customerId, ct);
-        stream.AppendOne(customerUndeletedEvent);
-        await _session.SaveChangesAsync(ct);
-        return stream.Aggregate.Apply(customerUndeletedEvent);
-    }
-    
     public async Task SaveChangesAsync(CancellationToken ct = default)
     {
         await _session.SaveChangesAsync(ct);
     }
     
-    private async Task<List<Customer>> AddProductDetailToCustomers(IEnumerable<Customer> customers, IEnumerable<Product> products)
+    private async Task<List<Customer>> AddProductDetailToCustomers(
+        IEnumerable<Customer> customersEnumerable, 
+        IEnumerable<Product> productsEnumerable)
     {
-        foreach (var customer in customers)
+        var customers = customersEnumerable as Customer[] ?? customersEnumerable.ToArray();
+        var products = productsEnumerable as Product[] ?? productsEnumerable.ToArray();
+        
+        for (var i = 0; i < customers.Length; i++)
         {
+            var customer = customers[i];
             var customerProducts = products.Where(p => 
                 customer.Id.Value == p.OwnerId?.Value || customer.Id.Value == p.DealerId?.Value).ToHashSet();
             if (!customer.ProductIds.SetEquals(customerProducts.Select(p => p.Id).ToHashSet()))
@@ -296,7 +305,7 @@ public class CustomerRepository : ICustomerRepository
                         productId,
                         new AppUserId(Guid.Empty),
                         DateTimeOffset.UtcNow);
-                    await UpdateAsync(customerProductAddedEvent);
+                    Append(customerProductAddedEvent);
                 }
                 var productIdsToRemove = customer.ProductIds.Except(customerProductIds);
                 foreach (var productId in productIdsToRemove)
@@ -309,16 +318,17 @@ public class CustomerRepository : ICustomerRepository
                             productId,
                             new AppUserId(Guid.Empty),
                             DateTimeOffset.UtcNow);
-                        await UpdateAsync(customerProductRemovedEvent);
+                        Append(customerProductRemovedEvent);
                     }
                     else
                     {
                         customerProducts.Add(product);
                     }
                 }
-                customer.ProductIds = customerProducts.Select(p => p.Id).ToHashSet();
+                await SaveChangesAsync();
+                customer = customer.SetProductIds(customerProducts.Select(p => p.Id).ToHashSet());
             }
-            customer.Products = customerProducts;
+            customers[i] = customer.AddProducts(customerProducts);
         }
         return customers.ToList();
     }

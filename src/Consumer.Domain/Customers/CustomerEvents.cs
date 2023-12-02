@@ -11,9 +11,11 @@ public sealed record CustomerEvents
         List<CustomerNameChangedEvent>? customerNameChangedEvents = null,
         List<CustomerAddressChangedEvent>? customerAddressChangedEvents = null,
         List<CustomerPhoneNumberChangedEvent>? customerPhoneNumberChangedEvents = null,
+        List<CustomerRoleChangedEvent>? customerRoleChangedEvents = null,
         List<CustomerProductAddedEvent>? customerProductAddedEvents = null,
         List<CustomerProductRemovedEvent>? customerProductRemovedEvents = null,
-        List<CustomerRoleChangedEvent>? customerRoleChangedEvents = null,
+        List<CustomerOrderAddedEvent>? customerOrderAddedEvents = null,
+        List<CustomerOrderRemovedEvent>? customerOrderRemovedEvents = null,
         List<CustomerActivatedEvent>? customerActivatedEvents = null,
         List<CustomerDeactivatedEvent>? customerDeactivatedEvents = null,
         List<CustomerDeletedEvent>? customerDeletedEvents = null,
@@ -23,9 +25,11 @@ public sealed record CustomerEvents
         CustomerNameChangedEvents = customerNameChangedEvents ?? new();
         CustomerAddressChangedEvents = customerAddressChangedEvents ?? new();
         CustomerPhoneNumberChangedEvents = customerPhoneNumberChangedEvents ?? new();
+        CustomerRoleChangedEvents = customerRoleChangedEvents ?? new();
         CustomerProductAddedEvents = customerProductAddedEvents ?? new();
         CustomerProductRemovedEvents = customerProductRemovedEvents ?? new();
-        CustomerRoleChangedEvents = customerRoleChangedEvents ?? new();
+        CustomerOrderAddedEvents = customerOrderAddedEvents ?? new();
+        CustomerOrderRemovedEvents = customerOrderRemovedEvents ?? new();
         CustomerActivatedEvents = customerActivatedEvents ?? new();
         CustomerDeactivatedEvents = customerDeactivatedEvents ?? new();
         CustomerDeletedEvents = customerDeletedEvents ?? new();
@@ -36,9 +40,11 @@ public sealed record CustomerEvents
     public List<CustomerNameChangedEvent> CustomerNameChangedEvents { get; set; }
     public List<CustomerAddressChangedEvent> CustomerAddressChangedEvents { get; set; }
     public List<CustomerPhoneNumberChangedEvent> CustomerPhoneNumberChangedEvents { get; set; }
+    public List<CustomerRoleChangedEvent> CustomerRoleChangedEvents { get; init; }
     public List<CustomerProductAddedEvent> CustomerProductAddedEvents { get; set; }
     public List<CustomerProductRemovedEvent> CustomerProductRemovedEvents { get; set; }
-    public List<CustomerRoleChangedEvent> CustomerRoleChangedEvents { get; init; }
+    public List<CustomerOrderAddedEvent> CustomerOrderAddedEvents { get; set; }
+    public List<CustomerOrderRemovedEvent> CustomerOrderRemovedEvents { get; set; }
     public List<CustomerActivatedEvent> CustomerActivatedEvents { get; set; }
     public List<CustomerDeactivatedEvent> CustomerDeactivatedEvents { get; set; }
     public List<CustomerDeletedEvent> CustomerDeletedEvents { get; set; }

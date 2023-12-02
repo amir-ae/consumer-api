@@ -1,20 +1,19 @@
-﻿using Consumer.API.Contract.V1.Products.Responses;
-using Consumer.Application.Common.Commands;
+﻿using Consumer.Application.Common.Commands;
 using MediatR;
 using ErrorOr;
 using Consumer.Domain.Common.ValueObjects;
-using Consumer.Domain.Products.Entities;
+using Consumer.Domain.Products;
 using Consumer.Domain.Products.ValueObjects;
+using Order = Consumer.Domain.Common.Entities.Order;
 
 namespace Consumer.Application.Products.Commands.Update;
 
 public record UpdateProductCommand(
-    AppUserId AppUserId,
     ProductId ProductId,
     string? Brand,
     string? Model,
-    Customer? Owner,
-    Customer? Dealer,
+    UpsertCustomerCommand? Owner,
+    UpsertCustomerCommand? Dealer,
     string? DeviceType,
     string? PanelModel,
     string? PanelSerialNumber,
@@ -26,6 +25,8 @@ public record UpdateProductCommand(
     bool? IsUnrepairable,
     DateTimeOffset? DateOfDemandForCompensation,
     string? DemanderFullName,
-    DateTimeOffset? UpdatedAt,
+    AppUserId UpdateBy,
+    DateTimeOffset? UpdateAt,
     bool OnCreate = false,
-    bool OnChangingRole = false) : IRequest<ErrorOr<ProductResponse>>;
+    bool OnChangingRole = false,
+    int? Version = null) : IRequest<ErrorOr<Product>>;

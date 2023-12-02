@@ -1,6 +1,8 @@
+using Consumer.API.Contract.V1.Common;
+
 namespace Consumer.API.Contract.V1.Products.Responses.Events;
 
-public sealed record ProductCreated(string ProductId,
+public record ProductCreated(string ProductId,
     string Brand,
     string Model,
     int? SerialId,
@@ -15,7 +17,7 @@ public sealed record ProductCreated(string ProductId,
     DateTimeOffset? DateOfPurchase,
     string? InvoiceNumber,
     decimal? PurchasePrice,
-    IList<ProductOrder> Orders,
+    IList<Order> Orders,
     bool? IsUnrepairable,
     DateTimeOffset? DateOfDemandForCompensation,
     string? DemanderFullName,

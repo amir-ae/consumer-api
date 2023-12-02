@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using Consumer.Domain.Common.ValueObjects;
 using Consumer.Domain.Customers.ValueObjects;
-using Consumer.Domain.Products.Entities;
+using Consumer.Domain.Common.Entities;
 using Consumer.Domain.Products.ValueObjects;
 
 namespace Consumer.Domain.Products.Events;
@@ -48,7 +48,7 @@ public sealed record ProductCreatedEvent : ProductEvent
         InvoiceNumber = invoiceNumber;
         PurchasePrice = purchasePrice;
         Orders = orders ?? new();
-        IsUnrepairable = isUnrepairable;
+        IsUnrepairable = isUnrepairable ?? false;
         DateOfDemandForCompensation = dateOfDemandForCompensation;
         DemanderFullName = demanderFullName;
         CreatedBy = createdBy;
@@ -69,8 +69,8 @@ public sealed record ProductCreatedEvent : ProductEvent
     public DateTimeOffset? DateOfPurchase { get; init; }
     public string? InvoiceNumber { get; init; }
     public decimal? PurchasePrice { get; init; }
-    public HashSet<Order> Orders { get; init; }
-    public bool? IsUnrepairable { get; set; }
+    public required HashSet<Order> Orders { get; init; }
+    public bool IsUnrepairable { get; set; }
     public DateTimeOffset? DateOfDemandForCompensation { get; set; }
     public string? DemanderFullName { get; set; }
     public required AppUserId CreatedBy { get; init; }

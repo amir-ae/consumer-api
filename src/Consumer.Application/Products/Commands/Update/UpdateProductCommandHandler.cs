@@ -1,5 +1,4 @@
 ﻿using Consumer.API.Contract.V1.Products.Messages;
-using Consumer.API.Contract.V1.Products.Responses;
 using Consumer.Application.Common.Commands;
 using MediatR;
 using ErrorOr;
@@ -7,15 +6,16 @@ using Consumer.Application.Common.Interfaces.Persistence;
 using Consumer.Application.Common.Interfaces.Services;
 using Consumer.Application.Customers.Commands.Create;
 using Consumer.Application.Customers.Commands.Update;
+using Consumer.Domain.Customers;
 using Consumer.Domain.Customers.Events;
 using Consumer.Domain.Customers.ValueObjects;
+using Consumer.Domain.Products;
 using Consumer.Domain.Products.Events;
 using Consumer.Domain.Products.ValueObjects;
-using Mapster;
 
 namespace Consumer.Application.Products.Commands.Update;
 
-public sealed class UpdateProductCommandHandler : IRequestHandler<UpdateProductCommand, ErrorOr<ProductResponse>>
+public sealed class UpdateProductCommandHandler : IRequestHandler<UpdateProductCommand, ErrorOr<Product>>
 {
     private readonly IProductRepository _productRepository;
     private readonly ICustomerRepository _customerRepository;
@@ -30,58 +30,66 @@ public sealed class UpdateProductCommandHandler : IRequestHandler<UpdateProductC
         _mediator = mediator;
     }
 
-    public async Task<ErrorOr<ProductResponse>> Handle(UpdateProductCommand command, CancellationToken ct = default)
+    public async Task<ErrorOr<Product>> Handle(UpdateProductCommand command, CancellationToken ct = default)
     {
-        var (appUserId, productId, brand, model, owner, dealer, deviceType, 
+        var (productId, brand, model, owner, dealer, deviceType, 
             panelModel, panelSerialNumber, warrantyCardNumber, dateOfPurchase, 
-            invoiceNumber, purchasePrice, orders, isUnrepairable, dateOfDemandForCompensation,
-            demanderFullName, updatedAt, onCreate, onChangingRole) = command;
+            invoiceNumber, purchasePrice, orders, isUnrepairable, 
+            dateOfDemandForCompensation, demanderFullName, updateBy, updateAt,
+            onCreate, onChangingRole, version) = command;
 
         var product = await _productRepository.ByIdAsync(productId, ct);
-        
         if (product is null) return Error.NotFound(
-            nameof(ProductId), $"{nameof(Product)} with id {productId} is not found.");
+            nameof(ProductId), $"{nameof(UpsertProductCommand)} with id {productId} is not found.");
 
-        ProductUpdateMessage? productUpdateMessage = null;
+        Action<ProductEvent, int?> append = _productRepository.Append;
+        Action<CustomerEvent, int?> customerAppend = _customerRepository.Append;
+        int? customerVersion = null;
+        ProductUpdateMessage? updateMessage = null;
         
-        if (!string.IsNullOrEmpty(brand) && brand != product.Brand)
+        product = product.UpdateBrand(brand, updateBy, updateAt, append, ref version, out bool brandUpdated);
+        if (brandUpdated)
         {
-            var productBrandChangedEvent = new ProductBrandChangedEvent(
-                productId,
-                brand,
-                appUserId,
-                updatedAt);
-            
-            product = await _productRepository.UpdateAsync(productBrandChangedEvent, product, ct);
-            
-            productUpdateMessage = new ProductUpdateMessage(appUserId.Value, productId.Value, brand, null, updatedAt);
+            updateMessage = new ProductUpdateMessage(productId.Value, 
+                brand, null, updateBy.Value, updateAt);
         }
-
-        if (!string.IsNullOrEmpty(model) && model != product.Model)
+        
+        product = product.UpdateModel(model, updateBy, updateAt, append, ref version, out bool modelUpdated);
+        if (modelUpdated)
         {
-            var productModelChangedEvent = new ProductModelChangedEvent(
-                productId,
-                model,
-                appUserId,
-                updatedAt);
-            
-            product = await _productRepository.UpdateAsync(productModelChangedEvent, product, ct);
-
-            if (productUpdateMessage is null)
+            if (updateMessage is null)
             {
-                productUpdateMessage = new ProductUpdateMessage(appUserId.Value, productId.Value, null, model, updatedAt);
+                updateMessage = new ProductUpdateMessage(productId.Value, null, model, updateBy.Value, updateAt);
             }
             else
             {
-                productUpdateMessage = productUpdateMessage with { Model = model };
+                updateMessage = updateMessage with { Model = model };
             }
+        }
+        
+        product = product.UpdateDeviceType(deviceType, updateBy, updateAt, append, ref version);
+
+        product = product.UpdatePanel(panelModel, panelSerialNumber, updateBy, updateAt, append, ref version);
+
+        product = product.UpdateWarrantyCardNumber(warrantyCardNumber, updateBy, updateAt, append, ref version);
+        
+        product = product.UpdatePurchaseData(dateOfPurchase, invoiceNumber, purchasePrice, updateBy, updateAt, append, ref version);
+
+        product = product.UpdateUnrepairable(isUnrepairable, dateOfDemandForCompensation, demanderFullName, 
+            updateBy, updateAt, append, ref version);
+
+        product = product.AddOrders(orders, updateBy, updateAt, append, ref version);
+
+        if (!onCreate)
+        {
+            product = product.RemoveOrders(orders, updateBy, updateAt, append, ref version);
         }
 
         var currentOwnerId = product.OwnerId;
         var currentDealerId = product.DealerId;
         var ownerId = owner?.CustomerId;
         var dealerId = dealer?.CustomerId;
-        
+
         if (onChangingRole)
         {
             if (currentOwnerId != dealerId && ownerId?.Value == string.Empty)
@@ -97,10 +105,11 @@ public sealed class UpdateProductCommandHandler : IRequestHandler<UpdateProductC
 
         if (owner is not null)
         {
+            Customer? newOwner;
+            string? ownerName = null;
             if (ownerId is null)
             {
                 var createCustomerCommand = new CreateCustomerCommand(
-                    appUserId,
                     owner.FirstName ?? string.Empty,
                     owner.MiddleName ?? string.Empty,
                     owner.LastName ?? string.Empty,
@@ -108,91 +117,65 @@ public sealed class UpdateProductCommandHandler : IRequestHandler<UpdateProductC
                     owner.CityId ?? new CityId(default),
                     owner.Address ?? string.Empty,
                     owner.Role,
-                    new HashSet<Product> { new (productId) },
-                    updatedAt);
+                    new HashSet<UpsertProductCommand> { new (productId) },
+                    null,
+                    updateBy,
+                    updateAt);
                 
-                await _mediator.Send(createCustomerCommand, ct);
+                var createResult = await _mediator.Send(createCustomerCommand, ct);
+                if (createResult.IsError) return createResult.Errors;
+                newOwner = createResult.Value;
+                ownerId = newOwner.Id;
             }
-            else
+            else if (ownerId.Value != string.Empty)
             {
-                string? ownerName = null;
-                if (ownerId.Value != string.Empty)
+                if (owner.IsId)
                 {
-                    List<ProductId> ownerProductIds;
-                    if (owner.IsId)
-                    {
-                        var newOwner = await _customerRepository.ByIdAsync(ownerId, ct);
-                        if (newOwner is null) return Error.NotFound(
-                            nameof(CustomerId), $"{nameof(Customer)} with id {ownerId} is not found.");
-
-                        ownerProductIds = newOwner.ProductIds.ToList();
-                    }
-                    else
-                    {
-                        var updateCustomerCommand = new UpdateCustomerCommand(
-                            appUserId,
-                            ownerId,
-                            owner.FirstName,
-                            owner.MiddleName,
-                            owner.LastName,
-                            owner.PhoneNumber,
-                            owner.CityId,
-                            owner.Address,
-                            owner.Role,
-                            null,
-                            updatedAt,
-                            true);
+                    newOwner = await _customerRepository.ByIdAsync(ownerId, ct);
+                    if (newOwner is null) return Error.NotFound(
+                        nameof(CustomerId), $"{nameof(UpsertCustomerCommand)} with id {ownerId} is not found.");
+                }
+                else
+                {
+                    var updateCustomer = new UpdateCustomerCommand(
+                        ownerId,
+                        owner.FirstName,
+                        owner.MiddleName,
+                        owner.LastName,
+                        owner.PhoneNumber,
+                        owner.CityId,
+                        owner.Address,
+                        owner.Role,
+                        null,
+                        null,
+                        updateBy,
+                        updateAt,
+                        true);
                 
-                        var ownerResult = await _mediator.Send(updateCustomerCommand, ct);
-                        ownerName = ownerResult.Value.FullName;
-                        ownerProductIds = ownerResult.Value.ProductIds.Select(p => new ProductId(p)).ToList();
-                    }
-
-                    if (!ownerProductIds.Contains(productId))
-                    {
-                        var customerProductAddedEvent = new CustomerProductAddedEvent(
-                            ownerId,
-                            productId,
-                            appUserId,
-                            updatedAt);
-
-                        await _customerRepository.UpdateAsync(customerProductAddedEvent, null, ct);
-                    }
+                    var updateResult = await _mediator.Send(updateCustomer, ct);
+                    if (updateResult.IsError) return updateResult.Errors;
+                    newOwner = updateResult.Value;
                 }
 
-                if (ownerId != currentOwnerId)
-                {
-                    if (currentOwnerId is not null && !onChangingRole)
-                    {
-                        var currentOwner = await _customerRepository.ByIdAsync(currentOwnerId, ct);
-
-                        var customerProductRemovedEvent = new CustomerProductRemovedEvent(
-                            currentOwnerId,
-                            productId,
-                            appUserId,
-                            updatedAt);
-
-                        await _customerRepository.UpdateAsync(customerProductRemovedEvent, currentOwner, ct);
-                    }
-                
-                    var productOwnerChangedEvent = new ProductOwnerChangedEvent(
-                        productId,
-                        ownerId.Value == string.Empty ? null : ownerId,
-                        ownerName,
-                        appUserId,
-                        updatedAt);
+                ownerName = newOwner.FullName;
+                newOwner.AddProduct(productId, updateBy, updateAt, customerAppend, ref customerVersion);
+            }
             
-                    product = await _productRepository.UpdateAsync(productOwnerChangedEvent, product, ct);
-                }
+            product = product.UpdateOwner(ownerId, ownerName, updateBy, updateAt, append, ref version, out bool ownerUpdated);
+            if (ownerUpdated && currentOwnerId is not null && !onChangingRole)
+            {
+                var currentOwner = await _customerRepository.ByIdAsync(currentOwnerId, ct);
+                currentOwner?.RemoveProduct(productId, updateBy, updateAt, customerAppend, ref customerVersion);
             }
         }
 
         if (dealer is not null)
         {
+            Customer? newDealer;
+            string? dealerName = null;
             if (dealerId is null)
             {
-                var createCustomerCommand = new CreateCustomerCommand(
-                    appUserId,
+                var createCustomer = new CreateCustomerCommand(
                     dealer.FirstName ?? string.Empty,
                     dealer.MiddleName ?? string.Empty,
                     dealer.LastName ?? string.Empty,
@@ -200,189 +183,65 @@ public sealed class UpdateProductCommandHandler : IRequestHandler<UpdateProductC
                     dealer.CityId ?? new CityId(default),
                     dealer.Address ?? string.Empty,
                     dealer.Role,
-                    new HashSet<Product> { new (productId) },
-                    updatedAt);
+                    new HashSet<UpsertProductCommand> { new (productId) },
+                    null,
+                    updateBy,
+                    updateAt);
                 
-                await _mediator.Send(createCustomerCommand, ct);
+                var createResult = await _mediator.Send(createCustomer, ct);
+                if (createResult.IsError) return createResult.Errors;
+                newDealer = createResult.Value;
+                dealerId = newDealer.Id;
             }
-            else
+            else if (dealerId.Value != string.Empty)
             {
-                string? dealerName = null;
-                if (dealerId.Value != string.Empty)
+                if (dealer.IsId)
                 {
-                    List<ProductId> dealerProductIds;
-                    if (dealer.IsId)
-                    {
-                        var newDealer = await _customerRepository.ByIdAsync(dealerId, ct);
-                        if (newDealer is null) return Error.NotFound(
-                            nameof(CustomerId), $"{nameof(Customer)} with id {dealerId} is not found.");
-
-                        dealerProductIds = newDealer.ProductIds.ToList();
-                    }
-                    else
-                    {
-                        var updateCustomerCommand = new UpdateCustomerCommand(
-                            appUserId,
-                            dealerId,
-                            dealer.FirstName,
-                            dealer.MiddleName,
-                            dealer.LastName,
-                            dealer.PhoneNumber,
-                            dealer.CityId,
-                            dealer.Address,
-                            dealer.Role,
-                            null,
-                            updatedAt,
-                            true);
-                
-                        var dealerResult = await _mediator.Send(updateCustomerCommand, ct);
-                        dealerName = dealerResult.Value.FullName;
-                        dealerProductIds = dealerResult.Value.ProductIds.Select(p => new ProductId(p)).ToList();
-                    }
-
-                    if (!dealerProductIds.Contains(productId))
-                    {
-                        var customerProductAddedEvent = new CustomerProductAddedEvent(
-                            dealerId,
-                            productId,
-                            appUserId,
-                            updatedAt);
-
-                        await _customerRepository.UpdateAsync(customerProductAddedEvent, null, ct);
-                    }
+                    newDealer = await _customerRepository.ByIdAsync(dealerId, ct);
+                    if (newDealer is null) return Error.NotFound(
+                        nameof(CustomerId), $"{nameof(UpsertCustomerCommand)} with id {dealerId} is not found.");
                 }
-
-                if (dealerId != currentDealerId)
+                else
                 {
-                    if (currentDealerId is not null && !onChangingRole)
-                    {
-                        var currentDealer = await _customerRepository.ByIdAsync(currentDealerId, ct);
+                    var updateCustomer = new UpdateCustomerCommand(
+                        dealerId,
+                        dealer.FirstName,
+                        dealer.MiddleName,
+                        dealer.LastName,
+                        dealer.PhoneNumber,
+                        dealer.CityId,
+                        dealer.Address,
+                        dealer.Role,
+                        null,
+                        null,
+                        updateBy,
+                        updateAt,
+                        true);
 
-                        var customerProductRemovedEvent = new CustomerProductRemovedEvent(
-                            currentDealerId,
-                            productId,
-                            appUserId,
-                            updatedAt);
-
-                        await _customerRepository.UpdateAsync(customerProductRemovedEvent, currentDealer, ct);
-                    }
+                    var updateResult = await _mediator.Send(updateCustomer, ct);
+                    if (updateResult.IsError) return updateResult.Errors;
+                    newDealer = updateResult.Value;
+                }
                 
-                    var productDealerChangedEvent = new ProductDealerChangedEvent(
-                        productId,
-                        dealerId.Value == string.Empty ? null : dealerId,
-                        dealerName,
-                        appUserId,
-                        updatedAt);
+                dealerName = newDealer.FullName;
+                newDealer.AddProduct(productId, updateBy, updateAt, customerAppend, ref customerVersion);
+            }
             
-                    product = await _productRepository.UpdateAsync(productDealerChangedEvent, product, ct);
-                }
+            product = product.UpdateDealer(dealerId, dealerName, updateBy, updateAt, append, ref version, out bool dealerUpdated);
+            if (dealerUpdated && currentDealerId is not null && !onChangingRole)
+            {
+                var currentDealer = await _customerRepository.ByIdAsync(currentDealerId, ct);
+                currentDealer?.RemoveProduct(productId, updateBy, updateAt, customerAppend, ref customerVersion);
             }
         }
 
-        if (!string.IsNullOrEmpty(deviceType) && deviceType != product.DeviceType)
+        if (updateMessage is not null)
         {
-            var productDeviceTypeChangedEvent = new ProductDeviceTypeChangedEvent(
-                productId,
-                deviceType,
-                appUserId,
-                updatedAt);
-            
-            product = await _productRepository.UpdateAsync(productDeviceTypeChangedEvent, product, ct);
-        }
-
-        if (!string.IsNullOrEmpty(panelModel) && panelModel != product.PanelModel
-            || !string.IsNullOrEmpty(panelSerialNumber) && panelSerialNumber != product.PanelSerialNumber)
-        {
-            var productPanelChangedEvent = new ProductPanelChangedEvent(
-                productId,
-                panelModel ?? product.PanelModel,
-                panelSerialNumber ?? product.PanelSerialNumber,
-                appUserId,
-                updatedAt);
-            
-            product = await _productRepository.UpdateAsync(productPanelChangedEvent, product, ct);
-        }
-
-        if (!string.IsNullOrEmpty(warrantyCardNumber) && warrantyCardNumber != product.WarrantyCardNumber)
-        {
-            var productWarrantyCardNumberChangedEvent = new ProductWarrantyCardNumberChangedEvent(
-                productId,
-                warrantyCardNumber,
-                appUserId,
-                updatedAt);
-            
-            product = await _productRepository.UpdateAsync(productWarrantyCardNumberChangedEvent, product, ct);
-        }
-
-        if (dateOfPurchase is not null && dateOfPurchase != product.DateOfPurchase
-            || !string.IsNullOrEmpty(invoiceNumber) && invoiceNumber != product.InvoiceNumber
-            || purchasePrice is not null && purchasePrice != product.PurchasePrice)
-        {
-            var productPurchaseDataChangedEvent = new ProductPurchaseDataChangedEvent(
-                productId,
-                dateOfPurchase ?? product.DateOfPurchase,
-                invoiceNumber ?? product.InvoiceNumber,
-                purchasePrice ?? product.PurchasePrice,
-                appUserId,
-                updatedAt);
-            
-            product = await _productRepository.UpdateAsync(productPurchaseDataChangedEvent, product, ct);
+            await _orderingService.PublishProductUpdateAsync(updateMessage, ct);
         }
         
-        if (isUnrepairable is not null && isUnrepairable != product.IsUnrepairable
-            || dateOfDemandForCompensation is not null && dateOfDemandForCompensation != product.DateOfDemandForCompensation
-            || !string.IsNullOrEmpty(demanderFullName) && demanderFullName != product.DemanderFullName)
-        {
-            var productUnrepairableEvent = new ProductUnrepairableEvent(
-                productId,
-                isUnrepairable ?? product.IsUnrepairable,
-                dateOfDemandForCompensation ?? product.DateOfDemandForCompensation,
-                demanderFullName ?? product.DemanderFullName,
-                appUserId,
-                updatedAt);
-            
-            product = await _productRepository.UpdateAsync(productUnrepairableEvent, product, ct);
-        }
-        
-        if (orders is not null && !orders.SetEquals(product.Orders))
-        {
-            var ordersToAdd = orders.Except(product.Orders);
-
-            foreach (var orderId in ordersToAdd)
-            {
-                var productOrderAddedEvent = new ProductOrderAddedEvent(
-                    productId,
-                    orderId,
-                    appUserId,
-                    updatedAt);
-            
-                product = await _productRepository.UpdateAsync(productOrderAddedEvent, product, ct);
-            }
-
-            if (!onCreate)
-            {
-                var ordersToRemove = product.Orders.Except(orders);
-                foreach (var orderId in ordersToRemove)
-                {
-                    var productOrderRemovedEvent = new ProductOrderRemovedEvent(
-                        productId,
-                        orderId,
-                        appUserId,
-                        updatedAt);
-            
-                    product = await _productRepository.UpdateAsync(productOrderRemovedEvent, product, ct);
-                }
-            }
-        }
-
-        if (productUpdateMessage is not null)
-        {
-            await _orderingService.PublishProductUpdateAsync(productUpdateMessage, ct);
-        }
-
-        await _customerRepository.SaveChangesAsync(ct);
         await _productRepository.SaveChangesAsync(ct);
 
-        return product.Adapt<ProductResponse>();
+        return product;
     }
 }

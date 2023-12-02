@@ -2,7 +2,6 @@ using Mapster;
 using Consumer.API.Contract.V1.Customers.Responses;
 using Consumer.Domain.Common.ValueObjects;
 using Consumer.Domain.Customers.ValueObjects;
-using Consumer.Domain.Products.Entities;
 using Consumer.Domain.Products.ValueObjects;
 
 namespace Consumer.API.Extensions.Mapping;
@@ -28,12 +27,6 @@ public class ValueObjectMappingConfig : IRegister
         config.NewConfig<string?, CustomerId?>()
             .MapWith(id => !string.IsNullOrWhiteSpace(id) ? new CustomerId(id) : null);
 
-        config.NewConfig<int, CustomerRole>()
-            .MapWith(role => (CustomerRole)role);
-        
-        config.NewConfig<int?, CustomerRole?>()
-            .MapWith(role => role.HasValue ? (CustomerRole)role.Value : null);
-
         config.NewConfig<string, ProductId>()
             .MapWith(id => new ProductId(id));
         
@@ -43,8 +36,11 @@ public class ValueObjectMappingConfig : IRegister
         config.NewConfig<int?, SerialId?>()
             .MapWith(id => id.HasValue ? new SerialId(id.Value) : null);
 
-        config.NewConfig<(string, Guid), Order>()
-            .MapWith(id => new Order(new OrderId(id.Item1), new CentreId(id.Item2)));
+        config.NewConfig<string, OrderId>()
+            .MapWith(id => new OrderId(id));
+        
+        config.NewConfig<Guid, CentreId>()
+            .MapWith(id => new CentreId(id));
         
         #endregion
         #region
@@ -58,25 +54,22 @@ public class ValueObjectMappingConfig : IRegister
         config.NewConfig<CityId, int>()
             .MapWith(id => id.Value);
 
-        config.NewConfig<CityId, CustomerCity>()
-            .MapWith(id => new CustomerCity(id.Value, null, null, null));
+        config.NewConfig<CityId, City>()
+            .MapWith(id => new City(id.Value, null, null, null));
         
         config.NewConfig<CustomerId, string>()
             .MapWith(id => id.Value);
         
         config.NewConfig<CustomerId?, string?>()
             .MapWith(id => id == null ? null : id.Value);
-        
-        config.NewConfig<CustomerRole, int>()
-            .MapWith(role => (int)role);
 
         config.NewConfig<ProductId, string>()
             .MapWith(id => id.Value);
-        
-        config.NewConfig<CentreId, Guid>()
+
+        config.NewConfig<OrderId, string>()
             .MapWith(id => id.Value);
         
-        config.NewConfig<OrderId, string>()
+        config.NewConfig<CentreId, Guid>()
             .MapWith(id => id.Value);
         
         config.NewConfig<SerialId, int>()

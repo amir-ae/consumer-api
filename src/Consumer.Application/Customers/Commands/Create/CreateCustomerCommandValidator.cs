@@ -7,7 +7,7 @@ public sealed class CreateCustomerCommandValidator : AbstractValidator<CreateCus
 {
     public CreateCustomerCommandValidator()
     {
-        RuleFor(x => x.AppUserId.Value).NotEmpty();
+        RuleFor(x => x.CreateBy.Value).NotEmpty();
         RuleFor(x => x.FirstName).NotEmpty().MaximumLength(35);
         RuleFor(x => x.MiddleName).MaximumLength(35);
         RuleFor(x => x.LastName).MaximumLength(35)

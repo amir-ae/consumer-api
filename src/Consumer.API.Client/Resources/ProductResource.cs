@@ -18,55 +18,51 @@ public class ProductResource : IProductResource
     }
 
     public async Task<ErrorOr<PaginatedList<ProductResponse>>> ByPage(int? pageSize, int? pageIndex, 
-        bool? nextPage = null, string? keyId = null, CancellationToken ct = default)
+        bool? nextPage = null, string? keyId = null, Guid? centreId = null, CancellationToken ct = default)
     {
         var queries = new Dictionary<string, string>();
         if (pageSize.HasValue) queries.Add(nameof(pageSize), pageSize.Value.ToString());
         if (pageIndex.HasValue) queries.Add(nameof(pageIndex), pageIndex.Value.ToString());
         if (nextPage.HasValue) queries.Add(nameof(nextPage), nextPage.Value.ToString());
         if (!string.IsNullOrWhiteSpace(keyId)) queries.Add(nameof(keyId), keyId);
+        if (centreId.HasValue) queries.Add(nameof(centreId), centreId.Value.ToString());
 
         var uri = _client.BuildUri(Products.ByPage.Uri(), queries);
         return await _client.Get<PaginatedList<ProductResponse>>(uri, ct);
     }
 
     public async Task<ErrorOr<PaginatedList<ProductResponse>>> ByPageDetail(int? pageSize, int? pageIndex, 
-        bool? nextPage = null, string? keyId = null, CancellationToken ct = default)
+        bool? nextPage = null, string? keyId = null, Guid? centreId = null, CancellationToken ct = default)
     {
         var queries = new Dictionary<string, string>();
         if (pageSize.HasValue) queries.Add(nameof(pageSize), pageSize.Value.ToString());
         if (pageIndex.HasValue) queries.Add(nameof(pageIndex), pageIndex.Value.ToString());
         if (nextPage.HasValue) queries.Add(nameof(nextPage), nextPage.Value.ToString());
         if (!string.IsNullOrWhiteSpace(keyId)) queries.Add(nameof(keyId), keyId);
+        if (centreId.HasValue) queries.Add(nameof(centreId), centreId.Value.ToString());
 
         var uri = _client.BuildUri(Products.ByPageDetail.Uri(), queries);
         return await _client.Get<PaginatedList<ProductResponse>>(uri, ct);
     }
 
-    public async Task<ErrorOr<IList<ProductForListingResponse>>> All(CancellationToken ct = default)
+    public async Task<ErrorOr<IList<ProductForListingResponse>>> List(Guid? centreId = null, CancellationToken ct = default)
     {
-        var uri = _client.BuildUri(Products.All.Uri());
+        var queries = new Dictionary<string, string>();
+        if (centreId.HasValue) queries.Add(nameof(centreId), centreId.Value.ToString());
+
+        var uri = _client.BuildUri(Products.List.Uri(), queries);
         return await _client.Get<IList<ProductForListingResponse>>(uri, ct);
     }
     
-    public async Task<ErrorOr<IList<ProductResponse>>> AllDetail(CancellationToken ct = default)
+    public async Task<ErrorOr<IList<ProductResponse>>> ListDetail(Guid? centreId = null, CancellationToken ct = default)
     {
-        var uri = _client.BuildUri(Products.AllDetail.Uri());
+        var queries = new Dictionary<string, string>();
+        if (centreId.HasValue) queries.Add(nameof(centreId), centreId.Value.ToString());
+
+        var uri = _client.BuildUri(Products.ListDetail.Uri(), queries);
         return await _client.Get<IList<ProductResponse>>(uri, ct);
     }
-    
-    public async Task<ErrorOr<IList<ProductResponse>>> DetailByCentreId(Guid centreId, CancellationToken ct = default)
-    {
-        var uri = _client.BuildUri(Products.DetailByCentreId.Uri(centreId));
-        return await _client.Get<IList<ProductResponse>>(uri, ct);
-    }
-    
-    public async Task<ErrorOr<ProductResponse>> DetailByOrderId(string orderId, CancellationToken ct = default)
-    {
-        var uri = _client.BuildUri(Products.DetailByOrderId.Uri(orderId));
-        return await _client.Get<ProductResponse>(uri, ct);
-    }
-    
+
     public async Task<ErrorOr<ProductResponse>> ById(string productId, CancellationToken ct = default)
     {
         var uri = _client.BuildUri(Products.ById.Uri(productId));
@@ -78,7 +74,7 @@ public class ProductResource : IProductResource
         var uri = _client.BuildUri(Products.DetailById.Uri(productId));
         return await _client.Get<ProductResponse>(uri, ct);
     }
-    
+
     public async Task<ErrorOr<ProductEventsResponse>> EventsById(string productId, CancellationToken ct = default)
     {
         var uri = _client.BuildUri(Products.EventsById.Uri(productId));
@@ -91,35 +87,41 @@ public class ProductResource : IProductResource
         return await _client.Get<bool>(uri, ct);
     }
     
-    public async Task<ErrorOr<ProductResponse>> Post(PostProductRequest request, CancellationToken ct = default)
+    public async Task<ErrorOr<ProductResponse>> DetailByOrderId(string orderId, CancellationToken ct = default)
     {
-        var uri = _client.BuildUri(Products.Post.Uri());
-        return await _client.PostAsJson<ProductResponse, PostProductRequest>(uri, request, ct);
+        var uri = _client.BuildUri(Products.DetailByOrderId.Uri(orderId));
+        return await _client.Get<ProductResponse>(uri, ct);
+    }
+    
+    public async Task<ErrorOr<ProductResponse>> Create(CreateProductRequest request, CancellationToken ct = default)
+    {
+        var uri = _client.BuildUri(Products.Create.Uri());
+        return await _client.PostAsJson<ProductResponse, CreateProductRequest>(uri, request, ct);
     }
 
-    public async Task<ErrorOr<ProductResponse>> Patch(string productId, PatchProductRequest request, CancellationToken ct = default)
+    public async Task<ErrorOr<ProductResponse>> Update(string productId, UpdateProductRequest request, CancellationToken ct = default)
     {
-        var uri = _client.BuildUri(Products.Patch.Uri(productId));
-        return await _client.PatchAsJson<ProductResponse, PatchProductRequest>(uri, request, ct);
+        var uri = _client.BuildUri(Products.Update.Uri(productId));
+        return await _client.PatchAsJson<ProductResponse, UpdateProductRequest>(uri, request, ct);
     }
 
-    public async Task<ErrorOr<ProductResponse>> Activate(string productId, Guid appUserId, CancellationToken ct = default)
+    public async Task<ErrorOr<ProductResponse>> Activate(string productId, Guid activateBy, CancellationToken ct = default)
     {
-        var queries = new Dictionary<string, string> { { nameof(appUserId), appUserId.ToString() } };
+        var queries = new Dictionary<string, string> { { nameof(activateBy), activateBy.ToString() } };
         var uri = _client.BuildUri(Products.Activate.Uri(productId), queries);
         return await _client.Patch<ProductResponse>(uri, ct);
     }
 
-    public async Task<ErrorOr<ProductResponse>> Deactivate(string productId, Guid appUserId, CancellationToken ct = default)
+    public async Task<ErrorOr<ProductResponse>> Deactivate(string productId, Guid deactivateBy, CancellationToken ct = default)
     {
-        var queries = new Dictionary<string, string> { { nameof(appUserId), appUserId.ToString() } };
+        var queries = new Dictionary<string, string> { { nameof(deactivateBy), deactivateBy.ToString() } };
         var uri = _client.BuildUri(Products.Deactivate.Uri(productId), queries);
         return await _client.Patch<ProductResponse>(uri, ct);
     }
 
-    public async Task<ErrorOr<ProductResponse>> Delete(string productId, Guid appUserId, CancellationToken ct = default)
+    public async Task<ErrorOr<ProductResponse>> Delete(string productId, Guid deleteBy, CancellationToken ct = default)
     {
-        var queries = new Dictionary<string, string> { { nameof(appUserId), appUserId.ToString() } };
+        var queries = new Dictionary<string, string> { { nameof(deleteBy), deleteBy.ToString() } };
         var uri = _client.BuildUri(Products.Delete.Uri(productId), queries);
         return await _client.Delete<ProductResponse>(uri, ct);
     }

@@ -8,10 +8,7 @@ public sealed class DeactivateProductCommandValidator : AbstractValidator<Deacti
 {
     public DeactivateProductCommandValidator(IValidatorChecks validatorChecks)
     {
-        RuleFor(x => x.AppUserId.Value).NotEmpty();
+        RuleFor(x => x.DeactivateBy.Value).NotEmpty();
         RuleFor(x => x.ProductId.Value).NotEmpty();
-        RuleFor(x => x.ProductId)
-            .MustAsync(validatorChecks.ProductExists)
-            .WithMessage(x => $"{nameof(Product)} with id {x.ProductId} is not found.");
     }
 }

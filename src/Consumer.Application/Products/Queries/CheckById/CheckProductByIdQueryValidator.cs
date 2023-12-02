@@ -7,6 +7,6 @@ public sealed class CheckProductByIdQueryValidator : AbstractValidator<CheckProd
 {
     public CheckProductByIdQueryValidator()
     {
-        RuleFor(x => x.ProductId).NotEmpty();
+        RuleFor(x => x.ProductId.Value).NotEmpty();
     }
 }

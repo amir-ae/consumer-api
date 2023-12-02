@@ -18,10 +18,11 @@ public sealed class CustomerByIdQueryHandler : IRequestHandler<CustomerByIdQuery
 
     public async Task<ErrorOr<CustomerResponse>> Handle(CustomerByIdQuery query, CancellationToken ct = default)
     {
-        var customer = await _customerRepository.ByIdAsync(query.CustomerId, ct);
+        var customerId = query.CustomerId;
+        var customer = await _customerRepository.ByIdAsync(customerId, ct);
             
         if (customer is null) return Error.NotFound(
-            nameof(query.CustomerId), $"{nameof(Customer)} with id {query.CustomerId.Value} is not found.");
+            nameof(query.CustomerId), $"{nameof(Customer)} with id {customerId.Value} is not found.");
         
         return customer.Adapt<CustomerResponse>();
     }

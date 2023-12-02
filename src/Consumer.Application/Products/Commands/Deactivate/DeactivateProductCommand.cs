@@ -1,11 +1,11 @@
-﻿using Consumer.API.Contract.V1.Products.Responses;
-using MediatR;
+﻿using MediatR;
 using ErrorOr;
 using Consumer.Domain.Common.ValueObjects;
+using Consumer.Domain.Products;
 using Consumer.Domain.Products.ValueObjects;
 
 namespace Consumer.Application.Products.Commands.Deactivate;
 
 public record DeactivateProductCommand(
-    AppUserId AppUserId,
-    ProductId ProductId) : IRequest<ErrorOr<ProductResponse>>;
+    ProductId ProductId,
+    AppUserId DeactivateBy) : IRequest<ErrorOr<Product>>;

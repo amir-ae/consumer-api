@@ -1,6 +1,7 @@
 ﻿namespace Consumer.API.Contract.V1.Common.Responses;
 
-public abstract record AuditableResponse(DateTimeOffset CreatedAt,
+public abstract record AuditableResponse(int Version,
+    DateTimeOffset CreatedAt,
     Guid CreatedBy,
     DateTimeOffset? LastModifiedAt,
     Guid? LastModifiedBy,
