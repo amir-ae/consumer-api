@@ -1,0 +1,23 @@
+﻿using ErrorOr;
+
+namespace Consumer.API.Extensions.ErrorHandling;
+
+public static class TaskExtensions
+{
+    public static Task<ErrorOr<T>> DefaultIfCanceled<T>(this Task<ErrorOr<T>> @this)
+    {
+        return
+            @this.ContinueWith
+            (
+                t =>
+                {
+                    if (t.IsCanceled)
+                    {
+                        return Error.Conflict("ClientClosedRequest", 
+                            "The client has closed the connection while the server is still processing the request.");
+                    }
+                    return t.Result;
+                }
+            );
+    }
+}

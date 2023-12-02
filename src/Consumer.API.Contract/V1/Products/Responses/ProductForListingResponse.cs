@@ -1,0 +1,20 @@
+﻿namespace Consumer.API.Contract.V1.Products.Responses;
+
+public sealed record ProductForListingResponse(string ProductId,
+    string Brand,
+    string Model,
+    int? SerialId,
+    string? OwnerId,
+    string? DealerId,
+    IList<ProductOrder> Orders,
+    DateTimeOffset CreatedAt,
+    string? DeviceType,
+    string? PanelModel,
+    string? PanelSerialNumber,
+    string? WarrantyCardNumber,
+    DateTimeOffset? DateOfPurchase,
+    string? InvoiceNumber,
+    decimal? PurchasePrice,
+    bool? IsUnrepairable,
+    DateTimeOffset? DateOfDemandForCompensation,
+    string? DemanderFullName);

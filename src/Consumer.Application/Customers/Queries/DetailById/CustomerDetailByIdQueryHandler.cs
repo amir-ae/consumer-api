@@ -1,0 +1,33 @@
+﻿using Consumer.API.Contract.V1.Customers.Responses;
+using MediatR;
+using ErrorOr;
+using Consumer.Application.Common.Interfaces.Persistence;
+using Consumer.Application.Common.Interfaces.Services;
+using Consumer.Domain.Customers;
+using Mapster;
+
+namespace Consumer.Application.Customers.Queries.DetailById;
+
+public sealed class CustomerDetailByIdQueryHandler : IRequestHandler<CustomerDetailByIdQuery, ErrorOr<CustomerResponse>>
+{
+    private readonly ICustomerRepository _customerRepository;
+    private readonly IEnrichmentService _enrichmentService;
+
+    public CustomerDetailByIdQueryHandler(ICustomerRepository customerRepository, IEnrichmentService enrichmentService)
+    {
+        _customerRepository = customerRepository;
+        _enrichmentService = enrichmentService;
+    }
+
+    public async Task<ErrorOr<CustomerResponse>> Handle(CustomerDetailByIdQuery query, CancellationToken ct = default)
+    {
+        var customer = await _customerRepository.DetailByIdAsync(query.CustomerId, ct);
+            
+        if (customer is null) return Error.NotFound(
+            nameof(query.CustomerId), $"{nameof(Customer)} with id {query.CustomerId} is not found.");
+
+        var customerResult = customer.Adapt<CustomerResponse>();
+        
+        return await _enrichmentService.EnrichCustomerResponse(customerResult, ct);
+    }
+}

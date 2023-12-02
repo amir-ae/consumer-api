@@ -1,0 +1,60 @@
+{
+  "customer": {
+    "Id": {
+      "Value": "1"
+    },
+    "FirstName": "Rae",
+    "MiddleName": null,
+    "LastName": "Mccall",
+    "FullName": "Mccall Rae",
+    "PhoneNumber": "(321) 682-8918",
+    "CityId": {
+      "Value": "1"
+    },
+    "Address": "San Gregorio",
+    "ProductIds": [{ "Value": "A" }]
+  },
+  "product": {
+    "Id": {
+      "Value": "A"
+    },
+    "Brand": "TCL",
+    "Model": "L40S60A",
+    "OwnerId": {
+      "Value": "1"
+    },
+    "Orders": [{ "OrderId": { "Value": "A" }, "CentreId": { "Value": "14424963-25e4-4731-8501-461750d27037" }}]
+  },
+  "order": {
+    "AppUserId": "9903ED01-A73C-4874-8ABF-D2678E3AE23D",
+    "CentreId": "9903ED01-A73C-4874-8ABF-D2678E3AE23D",
+    "Owner": {
+      "FirstName": "Rae",
+      "MiddleName": null,
+      "LastName": "Mccall",
+      "PhoneNumber": "(321) 682-8919",
+      "CityId": 1,
+      "Address": "San Gregorio"
+    },
+    "Dealer": {
+      "Name": "Aspen Coffey",
+      "PhoneNumber": "1-514-374-2937",
+      "CityId": 2,
+      "Address": "Klerksdorp"
+    },
+    "CustomerRole": 1,
+    "Product": {
+      "ProductId": "F",
+      "Brand": "TCL",
+      "Model": "L40S60A",
+      "SerialId": null
+    },
+    "ProductCondition": {
+      "Completeness": "Completeness",
+      "Appearance": "Appearance",
+      "Malfunction": "Malfunction",
+      "Warranty": false
+    },
+    "PostAt": "2023-04-23T18:25:43.511Z"
+  }
+}

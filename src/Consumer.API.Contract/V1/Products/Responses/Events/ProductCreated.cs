@@ -1,0 +1,23 @@
+namespace Consumer.API.Contract.V1.Products.Responses.Events;
+
+public sealed record ProductCreated(string ProductId,
+    string Brand,
+    string Model,
+    int? SerialId,
+    string? OwnerId,
+    string? OwnerName,
+    string? DealerId,
+    string? DealerName,
+    string? DeviceType,
+    string? PanelModel,
+    string? PanelSerialNumber,
+    string? WarrantyCardNumber,
+    DateTimeOffset? DateOfPurchase,
+    string? InvoiceNumber,
+    decimal? PurchasePrice,
+    IList<ProductOrder> Orders,
+    bool? IsUnrepairable,
+    DateTimeOffset? DateOfDemandForCompensation,
+    string? DemanderFullName,
+    Guid CreatedBy,
+    DateTimeOffset CreatedAt);

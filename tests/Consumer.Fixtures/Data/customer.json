@@ -1,0 +1,47 @@
+[
+  {
+    "Id": {
+      "Value": "1"
+    },
+    "FirstName": "Rae",
+    "MiddleName": null,
+    "LastName": "Mccall",
+    "FullName": "Mccall Rae",
+    "PhoneNumber": "(321) 682-8918",
+    "CityId": {
+      "Value": "1"
+    },
+    "Address": "San Gregorio",
+    "ProductIds": [{ "Value": "A" }]
+  },
+  {
+    "Id": {
+      "Value": "2"
+    },
+    "FirstName": "Aspen",
+    "MiddleName": null,
+    "LastName": "Coffey",
+    "FullName": "Aspen Coffey",
+    "PhoneNumber": "1-514-374-2937",
+    "CityId": {
+      "Value": 2
+    },
+    "Address": "Klerksdorp",
+    "ProductIds": [{ "Value": "B" }, { "Value": "C" }]
+  },
+  {
+    "Id": {
+      "Value": "3"
+    },
+    "FirstName": "Leonard",
+    "MiddleName": null,
+    "LastName": "Sandoval",
+    "PhoneNumber": "(576) 452-6868",
+    "CityId": {
+      "Value": "3"
+    },
+    "Address": "Inírida",
+    "ProductIds": null,
+    "IsDeleted": true
+  }
+]
