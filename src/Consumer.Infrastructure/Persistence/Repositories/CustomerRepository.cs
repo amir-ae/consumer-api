@@ -1,4 +1,5 @@
-﻿using System.Linq.Expressions;
+﻿using System.Collections.Concurrent;
+using System.Linq.Expressions;
 using Marten;
 using Marten.Linq;
 using Consumer.Application.Common.Interfaces.Persistence;
@@ -115,7 +116,7 @@ public class CustomerRepository : ICustomerRepository
         public Guid CentreId { get; init; }
         public int SkipSize => PageSize * (PageNumber - 1);
         public Expression<Func<IMartenQueryable<Customer>, IEnumerable<Customer>>> QueryIs() => query 
-            => query.Where(x => !x.IsDeleted && x.Orders.Any(o => o.CentreId != null && o.CentreId.Value == CentreId))
+            => query.Where(x => !x.IsDeleted && x.Orders.Any(o => o.CentreId != null! && o.CentreId.Value == CentreId))
                 .OrderByDescending(x => x.CreatedAt)
                 .ThenByDescending(x => x.LastModifiedAt)
                 .Skip(SkipSize)
@@ -135,7 +136,7 @@ public class CustomerRepository : ICustomerRepository
     {
         public Guid CentreId { get; init; }
         public Expression<Func<IMartenQueryable<Customer>, IEnumerable<Customer>>> QueryIs() => query 
-            => query.Where(x => !x.IsDeleted && x.Orders.Any(o => o.CentreId != null && o.CentreId.Value == CentreId))
+            => query.Where(x => !x.IsDeleted && x.Orders.Any(o => o.CentreId != null! && o.CentreId.Value == CentreId))
                 .OrderByDescending(x => x.CreatedAt)
                 .ThenByDescending(x => x.LastModifiedAt);
     }
@@ -217,7 +218,7 @@ public class CustomerRepository : ICustomerRepository
         public Guid CentreId { get; init; }
         public Expression<Func<IMartenQueryable<Customer>, IEnumerable<Customer>>> QueryIs() => query
              => query.Where(x => !x.IsDeleted 
-                                         && x.Orders.Any(o => o.CentreId != null && o.CentreId.Value == CentreId))
+                                         && x.Orders.Any(o => o.CentreId != null! && o.CentreId.Value == CentreId))
                 .OrderByDescending(x => x.CreatedAt)
                 .ThenByDescending(x => x.LastModifiedAt);
     }
@@ -243,7 +244,7 @@ public class CustomerRepository : ICustomerRepository
     {
         public Guid CentreId { get; init; }
         public Expression<Func<IMartenQueryable<Product>, IEnumerable<Product>>> QueryIs() => query
-             => query.Where(x => !x.IsDeleted && x.Orders.Any(o => o.CentreId != null && o.CentreId.Value == CentreId))
+             => query.Where(x => !x.IsDeleted && x.Orders.Any(o => o.CentreId != null! && o.CentreId.Value == CentreId))
                 .OrderByDescending(x => x.CreatedAt)
                 .ThenByDescending(x => x.LastModifiedAt);
     }
@@ -296,35 +297,50 @@ public class CustomerRepository : ICustomerRepository
         var customers = customersEnumerable as Customer[] ?? customersEnumerable.ToArray();
         var products = productsEnumerable as Product[] ?? productsEnumerable.ToArray();
         
-        for (var i = 0; i < customers.Length; i++)
+        var customerProductsMap = new ConcurrentDictionary<CustomerId, ConcurrentBag<Product>>();
+
+        Parallel.ForEach(products, product =>
         {
-            var customer = customers[i];
-            var customerProducts = products.Where(p => 
-                customer.Id.Value == p.OwnerId?.Value || customer.Id.Value == p.DealerId?.Value).ToHashSet();
+            if (product.OwnerId is not null)
+            {
+                customerProductsMap.GetOrAdd(product.OwnerId, _ 
+                    => new ConcurrentBag<Product>()).Add(product);
+            }
+
+            if (product.DealerId is not null)
+            {
+                customerProductsMap.GetOrAdd(product.DealerId, _ 
+                    => new ConcurrentBag<Product>()).Add(product);
+            }
+        });
+        
+        var changesMade = new ConcurrentBag<bool>();
+        
+        var tasks = customers.Select(customer => Task.Run(async () =>
+        {
+            var customerProducts = new HashSet<Product>();
+            if (customerProductsMap.TryGetValue(customer.Id, out var collection))
+            {
+                customerProducts = new HashSet<Product>(collection);
+            }
+
             if (!customer.ProductIds.SetEquals(customerProducts.Select(p => p.Id).ToHashSet()))
             {
                 var customerProductIds = customerProducts.Select(p => p.Id).ToHashSet();
                 var productIdsToAdd = customerProductIds.Except(customer.ProductIds);
                 foreach (var productId in productIdsToAdd)
                 {
-                    var customerProductAddedEvent = new CustomerProductAddedEvent(
-                        customer.Id,
-                        productId,
-                        new AppUserId(Guid.Empty),
-                        DateTimeOffset.UtcNow);
+                    var customerProductAddedEvent = new CustomerProductAddedEvent(customer.Id, productId, new AppUserId(Guid.Empty), DateTimeOffset.UtcNow);
                     Append(customerProductAddedEvent);
                 }
+
                 var productIdsToRemove = customer.ProductIds.Except(customerProductIds);
                 foreach (var productId in productIdsToRemove)
                 {
                     var product = await _session.LoadAsync<Product>(productId.Value);
                     if (product is null || customer.Id != product.OwnerId && customer.Id != product.DealerId)
                     {
-                        var customerProductRemovedEvent = new CustomerProductRemovedEvent(
-                            customer.Id,
-                            productId,
-                            new AppUserId(Guid.Empty),
-                            DateTimeOffset.UtcNow);
+                        var customerProductRemovedEvent = new CustomerProductRemovedEvent(customer.Id, productId, new AppUserId(Guid.Empty), DateTimeOffset.UtcNow);
                         Append(customerProductRemovedEvent);
                     }
                     else
@@ -332,10 +348,19 @@ public class CustomerRepository : ICustomerRepository
                         customerProducts.Add(product);
                     }
                 }
-                await SaveChangesAsync();
+
+                changesMade.Add(true);
                 customer.SetProductIds(customerProducts.Select(p => p.Id).ToHashSet());
             }
+
             customer.AddProducts(customerProducts);
+        })).ToList();
+
+        await Task.WhenAll(tasks);
+
+        if (changesMade.Any())
+        {
+            await SaveChangesAsync();
         }
         return customers.ToList();
     }
