@@ -1,10 +1,10 @@
 ﻿using Consumer.Application.Common.Commands;
+using Consumer.Domain.Common.Entities;
 using MediatR;
 using ErrorOr;
 using Consumer.Domain.Common.ValueObjects;
 using Consumer.Domain.Products;
 using Consumer.Domain.Products.ValueObjects;
-using Order = Consumer.Domain.Common.Entities.Order;
 
 namespace Consumer.Application.Products.Commands.Update;
 
@@ -21,7 +21,7 @@ public record UpdateProductCommand(
     DateTimeOffset? DateOfPurchase,
     string? InvoiceNumber,
     decimal? PurchasePrice,
-    HashSet<Order>? Orders,
+    HashSet<ProductOrder>? Orders,
     bool? IsUnrepairable,
     DateTimeOffset? DateOfDemandForCompensation,
     string? DemanderFullName,

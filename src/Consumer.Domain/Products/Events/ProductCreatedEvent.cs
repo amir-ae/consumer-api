@@ -25,7 +25,7 @@ public sealed record ProductCreatedEvent : ProductEvent
         DateTimeOffset? dateOfPurchase,
         string? invoiceNumber,
         decimal? purchasePrice,
-        HashSet<Order>? orders,
+        HashSet<ProductOrder>? orders,
         bool? isUnrepairable,
         DateTimeOffset? dateOfDemandForCompensation,
         string? demanderFullName,
@@ -68,7 +68,8 @@ public sealed record ProductCreatedEvent : ProductEvent
     public DateTimeOffset? DateOfPurchase { get; init; }
     public string? InvoiceNumber { get; init; }
     public decimal? PurchasePrice { get; init; }
-    public required HashSet<Order> Orders { get; init; }
+    public required HashSet<ProductOrder> Orders { get; init; }
+    public string OrdersString => string.Join(';', Orders.Select(key => $"{key.OrderId.Value},{key.CentreId.Value}"));
     public bool IsUnrepairable { get; set; }
     public DateTimeOffset? DateOfDemandForCompensation { get; set; }
     public string? DemanderFullName { get; set; }

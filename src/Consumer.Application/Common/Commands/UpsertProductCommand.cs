@@ -16,7 +16,7 @@ public record UpsertProductCommand(
     DateTimeOffset? DateOfPurchase = null,
     string? InvoiceNumber = null,
     decimal? PurchasePrice = null,
-    HashSet<Order>? Orders = null,
+    HashSet<ProductOrder>? Orders = null,
     bool? IsUnrepairable = null,
     DateTimeOffset? DateOfDemandForCompensation = null,
     string? DemanderFullName = null);

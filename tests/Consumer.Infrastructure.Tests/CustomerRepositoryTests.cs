@@ -3,7 +3,10 @@ using Consumer.Domain.Customers;
 using Consumer.Domain.Customers.Events;
 using Consumer.Domain.Customers.ValueObjects;
 using Consumer.Fixtures;
-using Consumer.Infrastructure.Persistence.Repositories;
+using Consumer.Infrastructure.Common.Persistence;
+using Consumer.Infrastructure.Customers.Repositories;
+using Marten;
+using Moq;
 using Shouldly;
 using Xunit;
 
@@ -15,7 +18,9 @@ public class CustomerRepositoryTests : IntegrationTest
 
     public CustomerRepositoryTests(ConsumerApplicationFactory<Program> factory) : base(factory)
     {
-        _sut = new CustomerRepository(OpenSession());
+        Mock<IDocumentSession> docSession = new();
+        Mock<ConsumerDbContext> dbContext = new();
+        _sut = new CustomerRepository(docSession.Object, dbContext.Object);
     }
 
     [Fact, TestPriority(1)]
@@ -44,7 +49,7 @@ public class CustomerRepositoryTests : IntegrationTest
 
         result.ShouldNotBeNull();
         result.Count.ShouldBe(count);
-        result.All(c => c.Products?.FirstOrDefault() != null).ShouldBeTrue();
+        result.All(c => c.CustomerProducts?.FirstOrDefault() != null).ShouldBeTrue();
     }
     
     [Theory, TestPriority(4)]
@@ -87,7 +92,7 @@ public class CustomerRepositoryTests : IntegrationTest
 
         result.ShouldNotBeNull();
         result.Id.ShouldBe(id);
-        result.Products?.FirstOrDefault().ShouldNotBeNull();
+        result.CustomerProducts?.FirstOrDefault().ShouldNotBeNull();
     }
 
     [Theory, TestPriority(8)]

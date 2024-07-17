@@ -11,7 +11,7 @@ public interface IProductRepository : IDisposable
     Task<Product?> ByStreamIdAsync(ProductId id, CancellationToken ct = default);
     Task<Product?> DetailByIdAsync(ProductId id, CancellationToken ct = default);
     Task<ProductEvents?> EventsByIdAsync(ProductId id, CancellationToken ct = default);
-    Task<Product?> DetailByOrderIdAsync(OrderId id, CancellationToken ct = default);
+    Task<Product?> DetailByOrderIdAsync(OrderId orderId, CancellationToken ct = default);
     Task<(List<Product>, long)> ByPageAsync(int pageSize, int pageNumber, bool? nextPage, ProductId? keyId, 
         CentreId? centreId, CancellationToken ct = default);
     Task<(List<Product>, long)> ByPageDetailAsync(int pageSize, int pageNumber, bool? nextPage, ProductId? keyId, 

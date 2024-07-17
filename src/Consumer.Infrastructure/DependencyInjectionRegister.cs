@@ -16,15 +16,21 @@ using Consumer.Application.Common.Interfaces.Services;
 using Consumer.Domain.Common.Configurations;
 using Consumer.Domain.Common.JsonConverters;
 using Consumer.Domain.Customers.ValueObjects;
-using Consumer.Infrastructure.Authentication;
-using Consumer.Infrastructure.Authentication.Policies;
-using Consumer.Infrastructure.Persistence.Configurations;
-using Consumer.Infrastructure.Persistence.Repositories;
-using Consumer.Infrastructure.Services;
+using Consumer.Infrastructure.Common.Authentication;
+using Consumer.Infrastructure.Common.Authentication.Policies;
+using Consumer.Infrastructure.Common.Persistence;
+using Consumer.Infrastructure.Common.Persistence.Configurations;
+using Consumer.Infrastructure.Common.Persistence.Projections;
+using Consumer.Infrastructure.Common.Persistence.Repositories;
+using Consumer.Infrastructure.Customers.Repositories;
+using Consumer.Infrastructure.Products.Repositories;
+using Consumer.Infrastructure.Common.Services;
 using Marten;
 using Marten.Events.Daemon.Resiliency;
+using Marten.Events.Projections;
 using MassTransit;
 using Microsoft.AspNetCore.Http.Json;
+using Microsoft.EntityFrameworkCore;
 using Polly;
 using Polly.Retry;
 using Weasel.Core;
@@ -89,7 +95,7 @@ public static class DependencyInjectionRegister
     public static IServiceCollection AddPersistence(this IServiceCollection services, IConfiguration configuration)
     {
         var serializer = new Marten.Services.JsonNetSerializer();
-        serializer.Customize(c =>
+        serializer.Configure(c =>
         {
             c.Converters.Add(new SmartEnumJsonConverter<CustomerRole>());
             c.Converters.Add(new StronglyTypedIdJsonConverter());
@@ -97,29 +103,34 @@ public static class DependencyInjectionRegister
         });
 
         var defaultConnection = configuration.GetConnectionString("Default")!;
-        var maintenanceConnection = configuration.GetConnectionString("Maintenance")!;
         AWSConfigs.AWSRegion = "eu-north-1";
 
+        services.AddScoped<ICustomerRepository, CustomerRepository>();
+        services.AddScoped<IProductRepository, ProductRepository>();
+        services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.AddScoped<IEventSubscriptionManager, EventSubscriptionManager>();
+        
+        services.AddDbContextPool<ConsumerDbContext>((serviceProvider, contextOptions) =>
+        {
+            contextOptions.UseNpgsql(defaultConnection, serverOptions =>
+            {
+                serverOptions.MigrationsAssembly(typeof(ConsumerDbContext).Assembly.FullName);
+                serverOptions.EnableRetryOnFailure(5, TimeSpan.FromSeconds(10), null);
+            });
+        });
+        
         services.AddMarten(storeOptions =>
         {
-            var schemaName = Environment.GetEnvironmentVariable("SchemaName") ?? "Consumer";
+            var schemaName = Environment.GetEnvironmentVariable("SchemaName") ?? "consumer";
             storeOptions.DatabaseSchemaName = schemaName;
             storeOptions.Connection(defaultConnection);
-            storeOptions.AutoCreateSchemaObjects = AutoCreate.CreateOrUpdate;
+            
+            storeOptions.AutoCreateSchemaObjects = AutoCreate.CreateOnly;
             storeOptions.Serializer(serializer);
             storeOptions.ConfigurePolly(o => o.AddRetry(new RetryStrategyOptions
             {
                 MaxRetryAttempts = 2,
             }));
-            storeOptions.CreateDatabasesForTenants(c =>
-            {
-                c.MaintenanceDatabase(maintenanceConnection);
-                c.ForTenant()
-                    .CheckAgainstPgDatabase()
-                    .WithOwner("postgres")
-                    .WithEncoding("UTF-8")
-                    .ConnectionLimit(-1);
-            });
 
             var stuff = Assembly.GetExecutingAssembly()
                 .DefinedTypes.Where(type => type.IsSubclassOf(typeof(MartenTableMetaDataBase))).ToList();
@@ -130,18 +141,13 @@ public static class DependencyInjectionRegister
                 temp.SetTableMetaData(storeOptions);
             }
         })
-            .ApplyAllDatabaseChangesOnStartup()
+            .AddProjectionWithServices<LinkTablesProjection>(ProjectionLifecycle.Inline, ServiceLifetime.Scoped)
             .UseLightweightSessions()
             .AddAsyncDaemon(DaemonMode.Solo);
         
         services.Configure<JsonOptions>(o => o.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
         services.Configure<Microsoft.AspNetCore.Mvc.JsonOptions>(o => o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
-        
-        services.AddScoped<IUnitOfWork, UnitOfWork>();
-        services.AddScoped<ICustomerRepository, CustomerRepository>();
-        services.AddScoped<IProductRepository, ProductRepository>();
-        services.AddScoped<IEventSubscriptionManager, EventSubscriptionManager>();
-        
+
         return services;
     }
 

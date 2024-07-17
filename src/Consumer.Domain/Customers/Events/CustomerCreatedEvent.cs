@@ -20,7 +20,7 @@ public sealed record CustomerCreatedEvent : CustomerEvent
         string address,
         CustomerRole? role,
         HashSet<ProductId>? productIds,
-        HashSet<Order>? orders,
+        HashSet<CustomerOrder>? orders,
         AppUserId actor,
         DateTimeOffset? createdAt = null) : base(
         customerId, actor)
@@ -61,6 +61,8 @@ public sealed record CustomerCreatedEvent : CustomerEvent
     public required string Address { get; init; }
     public required CustomerRole Role { get; init; }
     public required HashSet<ProductId> ProductIds { get; init; }
-    public required HashSet<Order> Orders { get; init; }
+    public string ProductIdsString => string.Join(',', ProductIds.Select(p => p.Value));
+    public required HashSet<CustomerOrder> Orders { get; init; }
+    public string OrdersString => string.Join(';', Orders.Select(key => $"{key.OrderId.Value},{key.CentreId.Value}"));
     public DateTimeOffset CreatedAt { get; init; }
 }

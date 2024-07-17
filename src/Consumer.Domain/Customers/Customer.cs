@@ -18,9 +18,9 @@ public sealed class Customer : AggregateRoot<CustomerId, string>
     public CityId CityId { get; private set; }
     public string Address { get; private set; }
     public CustomerRole Role { get; private set; }
+    public HashSet<CustomerOrder> CustomerOrders { get; private set; }
     public HashSet<ProductId> ProductIds { get; private set; }
-    public HashSet<Product>? Products { get; private set; }
-    public HashSet<Order> Orders { get; private set; }
+    public HashSet<CustomerProduct> CustomerProducts { get; private set; } = new();
 
     public CustomerEventHandler<CustomerEvent> CustomerEventHandler { get; } = new();
     
@@ -35,7 +35,7 @@ public sealed class Customer : AggregateRoot<CustomerId, string>
         string address,
         CustomerRole role,
         HashSet<ProductId> productIds,
-        HashSet<Order> orders,
+        HashSet<CustomerOrder> customerOrders,
         AppUserId createdBy,
         DateTimeOffset createdAt)
     {
@@ -49,8 +49,7 @@ public sealed class Customer : AggregateRoot<CustomerId, string>
         Address = address;
         Role = role;
         ProductIds = productIds;
-        Products = null;
-        Orders = orders;
+        CustomerOrders = customerOrders;
         CreatedAt = createdAt;
         CreatedBy = createdBy;
         IsActive = true;
@@ -83,7 +82,7 @@ public sealed class Customer : AggregateRoot<CustomerId, string>
         string address,
         CustomerRole? role,
         HashSet<ProductId>? productIds,
-        HashSet<Order>? orders,
+        HashSet<CustomerOrder>? orders,
         AppUserId createdBy,
         DateTimeOffset? createdAt,
         Func<CustomerCreatedEvent, Customer>? create,
@@ -182,18 +181,20 @@ public sealed class Customer : AggregateRoot<CustomerId, string>
         CustomerEventHandler.RaiseEvent(@event);
     }
     
-    public void AddOrders(HashSet<Order>? orders, AppUserId updateBy, DateTimeOffset? updateAt)
+    public void AddOrders(HashSet<CustomerOrder>? orders, AppUserId updateBy, DateTimeOffset? updateAt)
     {
-        var shouldUpdate = orders is not null && !orders.SetEquals(Orders);
+        var shouldUpdate = orders is not null && !orders.SetEquals(CustomerOrders);
         if (!shouldUpdate) return;
         
-        var customer = this;
-        var ordersToAdd = orders!.Except(Orders);
-        foreach (var orderId in ordersToAdd)
+        var ordersToAdd = orders!.Except(CustomerOrders);
+        foreach (var order in ordersToAdd)
         {
+            var updatedOrders = new HashSet<CustomerOrder>(CustomerOrders) { order };
+            
             var @event = new CustomerOrderAddedEvent(
                 Id,
-                orderId,
+                order,
+                updatedOrders,
                 updateBy,
                 updateAt);
             
@@ -202,17 +203,21 @@ public sealed class Customer : AggregateRoot<CustomerId, string>
         }
     }
     
-    public void RemoveOrders(HashSet<Order>? orders, AppUserId updateBy, DateTimeOffset? updateAt)
+    public void RemoveOrders(HashSet<CustomerOrder>? orders, AppUserId updateBy, DateTimeOffset? updateAt)
     {
-        var shouldUpdate = orders is not null && !orders.SetEquals(Orders);
+        var shouldUpdate = orders is not null && !orders.SetEquals(CustomerOrders);
         if (!shouldUpdate) return;
         
-        var ordersToRemove = Orders.Except(orders!);
-        foreach (var orderId in ordersToRemove)
+        var ordersToRemove = CustomerOrders.Except(orders!);
+        foreach (var order in ordersToRemove)
         {
+            var updatedOrders = new HashSet<CustomerOrder>(CustomerOrders);
+            updatedOrders.Remove(order);
+            
             var @event = new CustomerOrderRemovedEvent(
                 Id,
-                orderId,
+                order,
+                updatedOrders,
                 updateBy,
                 updateAt);
             
@@ -226,9 +231,12 @@ public sealed class Customer : AggregateRoot<CustomerId, string>
         var shouldUpdate = !ProductIds.Contains(productId);
         if (!shouldUpdate) return;
         
+        var productIds = new HashSet<ProductId>(ProductIds) { productId };
+        
         var @event = new CustomerProductAddedEvent(
             Id,
             productId,
+            productIds,
             updateBy,
             updateAt);
         
@@ -241,9 +249,13 @@ public sealed class Customer : AggregateRoot<CustomerId, string>
         var shouldUpdate = ProductIds.Contains(productId);
         if (!shouldUpdate) return;
         
+        var productIds = new HashSet<ProductId>(ProductIds);
+        productIds.Remove(productId);
+        
         var @event = new CustomerProductRemovedEvent(
             Id,
             productId,
+            productIds,
             updateBy,
             updateAt);
         
@@ -299,8 +311,10 @@ public sealed class Customer : AggregateRoot<CustomerId, string>
     
     public void AddProducts(HashSet<Product>? products)
     {
-        if (products is null || Products is not null && products.SetEquals(Products)) return;
-        Products = products;
+        if (products is null || CustomerProducts.Select(cp => cp.Product).ToHashSet().SetEquals(products)) return;
+        CustomerProducts = products
+            .Select(p => new CustomerProduct { ProductId = p.Id, Product = p, CustomerId = Id })
+            .ToHashSet();
     }
 
     public void Apply(CustomerNameChangedEvent changed)
@@ -351,14 +365,14 @@ public sealed class Customer : AggregateRoot<CustomerId, string>
     
     public void Apply(CustomerOrderAddedEvent added)
     {
-        Orders.Add(added.Order);
+        CustomerOrders.Add(added.Order);
         LastModifiedAt = added.OrderAddedAt;
         LastModifiedBy = added.Actor;
     }
 
     public void Apply(CustomerOrderRemovedEvent removed)
     {
-        Orders.Remove(removed.Order);
+        CustomerOrders.Remove(removed.Order);
         LastModifiedAt = removed.OrderRemovedAt;
         LastModifiedBy = removed.Actor;
     }

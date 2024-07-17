@@ -9,7 +9,10 @@
     <ItemGroup>
       <PackageReference Include="AWSSDK.RDS" Version="3.7.301.2" />
       <PackageReference Include="LinqKit" Version="1.3.0" />
-      <PackageReference Include="Marten" Version="7.23.1" />
+      <PackageReference Include="Marten" Version="7.24.0" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.3" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="8.0.3" />
+        <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.2" />
       <PackageReference Include="MassTransit.AmazonSQS" Version="8.1.3" />
       <PackageReference Include="MassTransit.RabbitMQ" Version="8.1.3" />
       <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.1" />
@@ -26,10 +29,10 @@
 
     <ItemGroup>
       <Reference Include="Catalog.API.Client">
-        <HintPath>ExternalDll\Catalog.API.Client.dll</HintPath>
+        <HintPath>Common\ExternalDll\Catalog.API.Client.dll</HintPath>
       </Reference>
       <Reference Include="Catalog.API.Contract">
-        <HintPath>ExternalDll\Catalog.API.Contract.dll</HintPath>
+        <HintPath>Common\ExternalDll\Catalog.API.Contract.dll</HintPath>
       </Reference>
     </ItemGroup>
     

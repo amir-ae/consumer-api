@@ -266,7 +266,7 @@ public sealed class UpdateProductCommandHandler : IRequestHandler<UpdateProductC
             }
         }
 
-        if (product.Orders.Any() && updateMessage is not null)
+        if (product.ProductOrders.Any() && updateMessage is not null)
         {
             _unitOfWork.ProductUpdateMessages.Add(updateMessage);
         }

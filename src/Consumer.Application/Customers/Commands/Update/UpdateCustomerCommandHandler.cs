@@ -154,7 +154,7 @@ public sealed class UpdateCustomerCommandHandler : IRequestHandler<UpdateCustome
             }
         }
 
-        if (customer.Orders.Any() && updateMessage is not null)
+        if (customer.CustomerOrders.Any() && updateMessage is not null)
         {
             _unitOfWork.CustomerUpdateMessages.Add(updateMessage);
         }

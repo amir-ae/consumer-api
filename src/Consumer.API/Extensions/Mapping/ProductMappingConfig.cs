@@ -1,9 +1,11 @@
 using Mapster;
 
 using Consumer.API.Contract.V1.Products.Requests;
+using Consumer.API.Contract.V1.Products.Responses;
 using Consumer.Application.Common.Commands;
 using Consumer.Domain.Customers.ValueObjects;
 using Consumer.Domain.Common.Entities;
+using Consumer.Domain.Products;
 using OrderResponse = Consumer.API.Contract.V1.Common.Order;
 
 namespace Consumer.API.Extensions.Mapping;
@@ -28,7 +30,17 @@ public class ProductMappingConfig : IRegister
                                                      && request.PhoneNumber == null
                                                      && request.CityId == null && string.IsNullOrWhiteSpace(request.Address));  
         
-        config.NewConfig<Order, OrderResponse>()
-            .MapWith(order => new OrderResponse(order.Id.Value, order.CentreId.Value));
+        config.NewConfig<ProductOrder, OrderResponse>()
+            .MapWith(order => new OrderResponse(order.OrderId.Value, order.CentreId.Value));
+        
+        config.NewConfig<Product, ProductForListingResponse>()
+            .Map(response => response.Orders, customer => customer.ProductOrders);
+            
+        config.NewConfig<Product, ProductResponse>()
+            .Map(response => response.Orders, customer => customer.ProductOrders)
+            .Map(response => response.Owner, product => product.ProductCustomers
+                .FirstOrDefault(pc => pc.Customer != null && pc.Customer.Id == product.OwnerId))
+            .Map(response => response.Dealer, product => product.ProductCustomers
+            .FirstOrDefault(pc => pc.Customer != null && pc.Customer.Id == product.DealerId));
     }
 }

@@ -18,14 +18,17 @@ public class CustomerMappingConfig : IRegister
             .Map(command => command.IsId, request => string.IsNullOrWhiteSpace(request.Brand)
                                                      && string.IsNullOrWhiteSpace(request.Model));
 
-        config.NewConfig<Order, OrderResponse>()
-            .MapWith(order => new OrderResponse(order.Id.Value, order.CentreId.Value));
+        config.NewConfig<CustomerOrder, OrderResponse>()
+            .MapWith(order => new OrderResponse(order.OrderId.Value, order.CentreId.Value));
         
         config.NewConfig<Customer, CustomerForListingResponse>()
-            .Map(response => response.City, customer => customer.CityId);
+            .Map(response => response.City, customer => customer.CityId)
+            .Map(response => response.Orders, customer => customer.CustomerOrders);
 
         config.NewConfig<Customer, CustomerResponse>()
-            .Map(response => response.City, customer => customer.CityId);
+            .Map(response => response.City, customer => customer.CityId)
+            .Map(response => response.Orders, customer => customer.CustomerOrders)
+            .Map(response => response.Products, customer => customer.CustomerProducts.Select(cp => cp.Product));
         
         config.NewConfig<CustomerCreatedEvent, CustomerCreated>()
             .Map(response => response.City, customer => customer.CityId);

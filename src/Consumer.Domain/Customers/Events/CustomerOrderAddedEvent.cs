@@ -10,15 +10,19 @@ public sealed record CustomerOrderAddedEvent : CustomerEvent
     [SetsRequiredMembers]
     public CustomerOrderAddedEvent(
         CustomerId customerId,
-        Order order,
+        CustomerOrder order,
+        HashSet<CustomerOrder>? orders,
         AppUserId actor,
         DateTimeOffset? orderAddedAt = null) : base(
         customerId, actor)
     {
         Order = order;
+        Orders = orders ?? new();
         OrderAddedAt = orderAddedAt ?? DateTimeOffset.UtcNow;
     }
     
-    public required Order Order { get; init; }
+    public required CustomerOrder Order { get; init; }
+    public required HashSet<CustomerOrder> Orders { get; init; }
+    public string OrdersString => string.Join(';', Orders.Select(key => $"{key.OrderId.Value},{key.CentreId.Value}"));
     public DateTimeOffset OrderAddedAt { get; init; }
 }

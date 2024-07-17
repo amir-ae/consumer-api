@@ -11,14 +11,18 @@ public sealed record CustomerProductAddedEvent : CustomerEvent
     public CustomerProductAddedEvent(
         CustomerId customerId,
         ProductId productId,
+        HashSet<ProductId>? productIds,
         AppUserId actor,
         DateTimeOffset? productAddedAt = null) : base(
         customerId, actor)
     {
         ProductId = productId;
+        ProductIds = productIds ?? new();
         ProductAddedAt = productAddedAt ?? DateTimeOffset.UtcNow;
     }
     
     public required ProductId ProductId { get; init; }
+    public required HashSet<ProductId> ProductIds { get; init; }
+    public string ProductIdsString => string.Join(',', ProductIds.Select(p => p.Value));
     public DateTimeOffset ProductAddedAt { get; init; }
 }

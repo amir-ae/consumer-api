@@ -113,7 +113,7 @@ public class ProductEndpointsTests : IntegrationTest
     [LoadData("product")]
     public async Task get_by_order_id_should_return_product_detail(Product product)
     {
-        var orderId = product.Orders.First().Id;
+        var orderId = product.ProductOrders.First().OrderId;
         var client = _factory.CreateClient();
         
         var response = await client.GetAsync(Products.DetailByOrderId.Uri(orderId.Value));
@@ -122,7 +122,7 @@ public class ProductEndpointsTests : IntegrationTest
         var content = await response.Content.ReadAsStringAsync();
         var result = JsonConvert.DeserializeObject<ProductResponse>(content);
         result.ShouldNotBeNull();
-        result.Orders.Select(o => o.Id).ShouldContain(orderId.Value);
+        result.Orders.Select(o => o.OrderId).ShouldContain(orderId.Value);
         result.Owner.ShouldNotBeNull();
     }
 

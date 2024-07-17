@@ -3,7 +3,10 @@ using Consumer.Domain.Products;
 using Consumer.Domain.Products.Events;
 using Consumer.Domain.Products.ValueObjects;
 using Consumer.Fixtures;
-using Consumer.Infrastructure.Persistence.Repositories;
+using Consumer.Infrastructure.Common.Persistence;
+using Consumer.Infrastructure.Products.Repositories;
+using Marten;
+using Moq;
 using Shouldly;
 using Xunit;
 
@@ -15,7 +18,9 @@ public class ProductRepositoryTests : IntegrationTest
 
     public ProductRepositoryTests(ConsumerApplicationFactory<Program> factory) : base(factory)
     {
-        _sut = new ProductRepository(OpenSession());
+        Mock<IDocumentSession> docSession = new();
+        Mock<ConsumerDbContext> dbContext = new();
+        _sut = new ProductRepository(docSession.Object, dbContext.Object);
     }
 
     [Fact, TestPriority(1)]
@@ -46,7 +51,7 @@ public class ProductRepositoryTests : IntegrationTest
 
         result.ShouldNotBeNull();
         result.Count.ShouldBe(count);
-        result.All(p => p.Owner != null).ShouldBeTrue();
+        result.All(p => p.ProductCustomers.Any()).ShouldBeTrue();
     }
     
     [Theory, TestPriority(4)]
@@ -62,27 +67,27 @@ public class ProductRepositoryTests : IntegrationTest
     [LoadData("product")]
     public async Task should_return_record_detail_by_order_id(Product product)
     {
-        var orderId = product.Orders.First().Id;
+        var orderId = product.ProductOrders.First().OrderId;
         
         var result = await _sut.DetailByOrderIdAsync(orderId);
 
         result.ShouldNotBeNull();
         result.Id.ShouldBe(product.Id);
-        result.Owner.ShouldNotBeNull();
+        result.ProductCustomers.Any().ShouldBeTrue();
     }
     
     [Theory, TestPriority(6)]
     [LoadData("product")]
     public async Task should_return_records_detail_by_centre_id(Product product)
     {
-        var centreId = product.Orders.First().CentreId;
+        var centreId = product.ProductOrders.First().CentreId;
         
         var result = await _sut.DetailByCentreIdAsync(centreId);
 
         result.ShouldNotBeEmpty();
         result.Select(p => p.Id).ShouldContain(product.Id);
-        result.ForEach(p => p.Orders.Select(o => o.CentreId).ShouldContain(centreId));
-        result.All(p => p.Owner != null).ShouldBeTrue();
+        result.ForEach(p => p.ProductOrders.Select(o => o.CentreId).ShouldContain(centreId));
+        result.All(p => p.ProductCustomers.Any()).ShouldBeTrue();
     }
     
     [Theory, TestPriority(7)]
@@ -103,7 +108,7 @@ public class ProductRepositoryTests : IntegrationTest
 
         result.ShouldNotBeNull();
         result.Id.ShouldBe(id);
-        result.Owner.ShouldNotBeNull();
+        result.ProductCustomers.Any().ShouldBeTrue();
     }
 
     [Fact, TestPriority(9)]

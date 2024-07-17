@@ -10,15 +10,19 @@ public sealed record ProductOrderRemovedEvent : ProductEvent
     [SetsRequiredMembers]
     public ProductOrderRemovedEvent(
         ProductId productId,
-        Order order,
+        ProductOrder order,
+        HashSet<ProductOrder>? orders,
         AppUserId actor,
         DateTimeOffset? orderRemovedAt = null) : base(
         productId, actor)
     {
         Order = order;
+        Orders = orders ?? new();
         OrderRemovedAt = orderRemovedAt ?? DateTimeOffset.UtcNow;
     }
     
-    public required Order Order { get; init; }
+    public required ProductOrder Order { get; init; }
+    public required HashSet<ProductOrder> Orders { get; init; }
+    public string OrdersString => string.Join(';', Orders.Select(key => $"{key.OrderId.Value},{key.CentreId.Value}"));
     public DateTimeOffset OrderRemovedAt { get; init; }
 }

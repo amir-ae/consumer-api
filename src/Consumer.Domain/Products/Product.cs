@@ -14,9 +14,7 @@ public sealed class Product : AggregateRoot<ProductId, string>
     public string Model { get; private set; }
     public SerialId? SerialId { get; private set; }
     public CustomerId? OwnerId { get; private set; }
-    public Customer? Owner { get; private set; }
     public CustomerId? DealerId { get; private set; }
-    public Customer? Dealer { get; private set; }
     public string? DeviceType { get; private set; }
     public string? PanelModel { get; private set; }
     public string? PanelSerialNumber { get; private set; }
@@ -27,7 +25,8 @@ public sealed class Product : AggregateRoot<ProductId, string>
     public bool IsUnrepairable { get; private set; }
     public DateTimeOffset? DateOfDemandForCompensation { get; private set; }
     public string? DemanderFullName { get; private set; }
-    public HashSet<Order> Orders { get; private set; }
+    public HashSet<ProductOrder> ProductOrders { get; private set; }
+    public HashSet<CustomerProduct> ProductCustomers { get; private set; } = new();
     
     public ProductEventHandler<ProductEvent> ProductEventHandler { get; } = new();
 
@@ -45,7 +44,7 @@ public sealed class Product : AggregateRoot<ProductId, string>
         DateTimeOffset? dateOfPurchase,
         string? invoiceNumber,
         decimal? purchasePrice,
-        HashSet<Order> orders,
+        HashSet<ProductOrder> productOrders,
         bool isUnrepairable,
         DateTimeOffset? dateOfDemandForCompensation,
         string? demanderFullName,
@@ -65,7 +64,7 @@ public sealed class Product : AggregateRoot<ProductId, string>
         DateOfPurchase = dateOfPurchase;
         InvoiceNumber = invoiceNumber;
         PurchasePrice = purchasePrice;
-        Orders = orders;
+        ProductOrders = productOrders;
         IsUnrepairable = isUnrepairable;
         DateOfDemandForCompensation = dateOfDemandForCompensation;
         DemanderFullName = demanderFullName;
@@ -112,7 +111,7 @@ public sealed class Product : AggregateRoot<ProductId, string>
         DateTimeOffset? dateOfPurchase,
         string? invoiceNumber,
         decimal? purchasePrice,
-        HashSet<Order>? orders,
+        HashSet<ProductOrder>? orders,
         bool? isUnrepairable,
         DateTimeOffset? dateOfDemandForCompensation,
         string? demanderFullName,
@@ -272,17 +271,20 @@ public sealed class Product : AggregateRoot<ProductId, string>
         ProductEventHandler.RaiseEvent(@event);
     }
     
-    public void AddOrders(HashSet<Order>? orders, AppUserId updateBy, DateTimeOffset? updateAt)
+    public void AddOrders(HashSet<ProductOrder>? orders, AppUserId updateBy, DateTimeOffset? updateAt)
     {
-        var shouldUpdate = orders is not null && !orders.SetEquals(Orders);
+        var shouldUpdate = orders is not null && !orders.SetEquals(ProductOrders);
         if (!shouldUpdate) return;
         
-        var ordersToAdd = orders!.Except(Orders);
-        foreach (var orderId in ordersToAdd)
+        var ordersToAdd = orders!.Except(ProductOrders);
+        foreach (var order in ordersToAdd)
         {
+            var updatedOrders = new HashSet<ProductOrder>(ProductOrders) { order };
+            
             var @event = new ProductOrderAddedEvent(
                 Id,
-                orderId,
+                order,
+                updatedOrders,
                 updateBy,
                 updateAt);
 
@@ -291,17 +293,21 @@ public sealed class Product : AggregateRoot<ProductId, string>
         }
     }
     
-    public void RemoveOrders(HashSet<Order>? orders, AppUserId updateBy, DateTimeOffset? updateAt)
+    public void RemoveOrders(HashSet<ProductOrder>? orders, AppUserId updateBy, DateTimeOffset? updateAt)
     {
-        var shouldUpdate = orders is not null && !orders.SetEquals(Orders);
+        var shouldUpdate = orders is not null && !orders.SetEquals(ProductOrders);
         if (!shouldUpdate) return;
         
-        var ordersToRemove = Orders.Except(orders!);
-        foreach (var orderId in ordersToRemove)
+        var ordersToRemove = ProductOrders.Except(orders!);
+        foreach (var order in ordersToRemove)
         {
+            var updatedOrders = new HashSet<ProductOrder>(ProductOrders);
+            updatedOrders.Remove(order);
+            
             var @event = new ProductOrderRemovedEvent(
                 Id,
-                orderId,
+                order,
+                updatedOrders,
                 updateBy,
                 updateAt);
             
@@ -386,14 +392,14 @@ public sealed class Product : AggregateRoot<ProductId, string>
 
     public void AddOwner(Customer? owner)
     {
-        if (owner is null || owner == Owner) return;
-        Owner = owner;
+        if (owner is null) return;
+        ProductCustomers.Add(new CustomerProduct { CustomerId = owner.Id, Customer = owner, ProductId = Id });
     }
     
     public void AddDealer(Customer? dealer)
     {
-        if (dealer is null || dealer == Dealer) return;
-        Dealer = dealer;
+        if (dealer is null) return;
+        ProductCustomers.Add(new CustomerProduct { CustomerId = dealer.Id, Customer = dealer, ProductId = Id });
     }
 
     public void Apply(ProductBrandChangedEvent changed)
@@ -426,14 +432,14 @@ public sealed class Product : AggregateRoot<ProductId, string>
 
     public void Apply(ProductOrderAddedEvent added)
     {
-        Orders.Add(added.Order);
+        ProductOrders.Add(added.Order);
         LastModifiedAt = added.OrderAddedAt;
         LastModifiedBy = added.Actor;
     }
 
     public void Apply(ProductOrderRemovedEvent removed)
     {
-        Orders.Remove(removed.Order);
+        ProductOrders.Remove(removed.Order);
         LastModifiedAt = removed.OrderRemovedAt;
         LastModifiedBy = removed.Actor;
     }

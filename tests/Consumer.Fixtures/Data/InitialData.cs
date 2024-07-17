@@ -121,7 +121,7 @@ public static class InitialDatasets
             null,
             null,
             null,
-            new HashSet<Order> { Order.Create(new OrderId("A"), new CentreId(Guid.Parse("14424963-25e4-4731-8501-461750d27037"))) },
+            new HashSet<ProductOrder> { new() { OrderId = new OrderId("A"), CentreId = new CentreId(Guid.Parse("14424963-25e4-4731-8501-461750d27037")) } },
             null,
             null,
             null,

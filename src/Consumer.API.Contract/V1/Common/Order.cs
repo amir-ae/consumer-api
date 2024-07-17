@@ -6,13 +6,13 @@ public record Order
 {
     [SetsRequiredMembers]
     public Order(
-        string id,
+        string orderId,
         Guid centreId)
     {
-        Id = id;
+        OrderId = orderId;
         CentreId = centreId;
     }
         
-    public string Id { get; init; }
+    public string OrderId { get; init; }
     public Guid CentreId { get; init; }
 }

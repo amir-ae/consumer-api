@@ -24,7 +24,7 @@
     "OwnerId": {
       "Value": "1"
     },
-    "Orders": [{ "Id": { "Value": "A" }, "CentreId": { "Value": "14424963-25e4-4731-8501-461750d27037" }}]
+    "CustomerOrders": [{ "OrderId": { "Value": "A" }, "CentreId": { "Value": "14424963-25e4-4731-8501-461750d27037" }}]
   },
   "order": {
     "AppUserId": "9903ED01-A73C-4874-8ABF-D2678E3AE23D",

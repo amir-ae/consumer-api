@@ -4,7 +4,7 @@ using Consumer.Domain.Common.JsonConverters;
 using Consumer.Domain.Customers;
 using Consumer.Domain.Products;
 using Consumer.Fixtures.Data;
-using Consumer.Infrastructure.Persistence.Configurations;
+using Consumer.Infrastructure.Common.Persistence.Configurations;
 using Marten;
 using Marten.Events;
 using Marten.Events.Daemon.Resiliency;
@@ -30,7 +30,7 @@ public class ConsumerApplicationFactory<Program> : WebApplicationFactory<Program
             .ConfigureTestServices(services =>
             {
                 var serializer = new Marten.Services.JsonNetSerializer();
-                serializer.Customize(c =>
+                serializer.Configure(c =>
                 {
                     c.Converters.Add(new StronglyTypedIdJsonConverter());
                     c.ContractResolver = new ResolvePrivateSetters();
