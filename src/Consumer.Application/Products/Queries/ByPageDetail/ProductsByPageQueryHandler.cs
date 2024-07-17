@@ -1,11 +1,11 @@
-﻿using Consumer.API.Contract.V1.Common.Responses;
+﻿using System.Collections.Concurrent;
+using Consumer.API.Contract.V1.Common.Responses;
 using Consumer.API.Contract.V1.Products.Responses;
 using MediatR;
 using ErrorOr;
 using Consumer.Application.Common.Interfaces.Persistence;
 using Consumer.Application.Common.Interfaces.Services;
 using Mapster;
-using ValueTaskSupplement;
 
 namespace Consumer.Application.Products.Queries.ByPageDetail;
 
@@ -26,12 +26,18 @@ public sealed class ProductsByPageDetailQueryHandler : IRequestHandler<ProductsB
 
         var (products, totalCount) = await _productRepository.ByPageDetailAsync(pageSize, pageNumber, nextPage, keyId, centreId, ct);
 
-        var tasks = products.Adapt<List<ProductResponse>>()
-            .Select(product => _enrichmentService.EnrichProductResponse(product, ct));
-        
-        var result = await ValueTaskEx.WhenAll(tasks);
+        var productResponses = new ConcurrentBag<ProductResponse>();
 
+        await Parallel.ForEachAsync(products, ct, async (product, token) =>
+        {
+            var productResponse = product.Adapt<ProductResponse>();
+            productResponses.Add(await _enrichmentService.EnrichProductResponse(productResponse, token));
+        });
+        
         return new PaginatedList<ProductResponse>(
-            pageNumber, pageSize, totalCount, result);
+            pageNumber, pageSize, totalCount, productResponses
+                .OrderByDescending(x => x.CreatedAt)
+                .ThenByDescending(x => x.LastModifiedAt)
+                .ToArray());
     }
 }

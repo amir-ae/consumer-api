@@ -6,7 +6,7 @@ using Xunit;
 namespace Consumer.Fixtures;
 
 [TestCaseOrderer("Consumer.Fixtures.PriorityOrderer", "Consumer.Fixtures")]
-public class IntegrationTest : IClassFixture<ConsumerApplicationFactory<Program>>
+public class IntegrationTest : IClassFixture<ConsumerDbContextFactory>, IClassFixture<ConsumerApplicationFactory<Program>>
 {
     protected readonly ConsumerApplicationFactory<Program> Factory;
     protected IDocumentStore DocumentStore => Factory.Services.GetRequiredService<IDocumentStore>();

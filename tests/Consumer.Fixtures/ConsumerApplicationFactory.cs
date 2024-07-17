@@ -2,9 +2,12 @@
 using System.Text.Json.Serialization;
 using Consumer.Domain.Common.JsonConverters;
 using Consumer.Domain.Customers;
+using Consumer.Domain.Customers.ValueObjects;
 using Consumer.Domain.Products;
 using Consumer.Fixtures.Data;
+using Consumer.Infrastructure.Common.Persistence;
 using Consumer.Infrastructure.Common.Persistence.Configurations;
+using Consumer.Infrastructure.Common.Persistence.Projections;
 using Marten;
 using Marten.Events;
 using Marten.Events.Daemon.Resiliency;
@@ -13,6 +16,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Weasel.Core;
 
@@ -29,15 +33,35 @@ public class ConsumerApplicationFactory<Program> : WebApplicationFactory<Program
             .UseEnvironment("Testing")
             .ConfigureTestServices(services =>
             {
+                var options = new DbContextOptionsBuilder<ConsumerDbContext>()
+                    .UseNpgsql(_connectionString, serverOptions =>
+                    {
+                        serverOptions.MigrationsAssembly(typeof(ConsumerDbContext).Assembly.FullName);
+                        serverOptions.EnableRetryOnFailure(5, TimeSpan.FromSeconds(10), null);
+                    })
+                    .Options;
+
+                services.AddScoped<ConsumerDbContext>(
+                    _ => new TestConsumerDbContext(options));
+
+                var sp = services.BuildServiceProvider();
+
+                using var scope = sp.CreateScope();
+
+                var scopedServices = scope.ServiceProvider;
+                var db = scopedServices.GetRequiredService<ConsumerDbContext>();
+                db.Database.EnsureCreated();
+                
                 var serializer = new Marten.Services.JsonNetSerializer();
                 serializer.Configure(c =>
                 {
+                    c.Converters.Add(new SmartEnumJsonConverter<CustomerRole>());
                     c.Converters.Add(new StronglyTypedIdJsonConverter());
                     c.ContractResolver = new ResolvePrivateSetters();
                 });
                 services.AddMarten(storeOptions =>
                     {
-                        storeOptions.DatabaseSchemaName = "ConsumerTests";
+                        storeOptions.DatabaseSchemaName = "consumer";
                         storeOptions.Connection(_connectionString);
                         storeOptions.AutoCreateSchemaObjects = AutoCreate.CreateOrUpdate;
                         storeOptions.Serializer(serializer);

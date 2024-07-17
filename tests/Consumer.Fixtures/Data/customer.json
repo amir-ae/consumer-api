@@ -8,9 +8,7 @@
     "LastName": "Mccall",
     "FullName": "Mccall Rae",
     "PhoneNumber": { "Value": "(321) 682-8918", "CountryId": null, "Description": null },
-    "CityId": {
-      "Value": "1"
-    },
+    "CityId": { "Value": 1 },
     "Address": "San Gregorio",
     "Role": 1,
     "ProductIds": [{ "Value": "A" }]
@@ -24,9 +22,7 @@
     "LastName": "Coffey",
     "FullName": "Aspen Coffey",
     "PhoneNumber": { "Value": "514-374-2937", "CountryId": null, "Description": null },
-    "CityId": {
-      "Value": 2
-    },
+    "CityId": { "Value": 2 },
     "Address": "Klerksdorp",
     "Role": 1,
     "ProductIds": [{ "Value": "B" }, { "Value": "C" }]
@@ -39,9 +35,7 @@
     "MiddleName": null,
     "LastName": "Sandoval",
     "PhoneNumber": { "Value": "(576) 452-6868", "CountryId": null, "Description": null },
-    "CityId": {
-      "Value": "3"
-    },
+    "CityId": { "Value": 3 },
     "Address": "Inírida",
     "Role": 1,
     "ProductIds": null,

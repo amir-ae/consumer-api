@@ -3,10 +3,7 @@ using Consumer.Domain.Products;
 using Consumer.Domain.Products.Events;
 using Consumer.Domain.Products.ValueObjects;
 using Consumer.Fixtures;
-using Consumer.Infrastructure.Common.Persistence;
 using Consumer.Infrastructure.Products.Repositories;
-using Marten;
-using Moq;
 using Shouldly;
 using Xunit;
 
@@ -14,13 +11,11 @@ namespace Consumer.Infrastructure.Tests;
 
 public class ProductRepositoryTests : IntegrationTest
 {
-    private readonly ProductRepository _sut;
+    private readonly ProductMartenRepository _sut;
 
     public ProductRepositoryTests(ConsumerApplicationFactory<Program> factory) : base(factory)
     {
-        Mock<IDocumentSession> docSession = new();
-        Mock<ConsumerDbContext> dbContext = new();
-        _sut = new ProductRepository(docSession.Object, dbContext.Object);
+        _sut = new ProductMartenRepository(OpenSession());
     }
 
     [Fact, TestPriority(1)]
@@ -45,8 +40,6 @@ public class ProductRepositoryTests : IntegrationTest
     [InlineData(2)]
     public async Task should_get_all_records_in_detail(int count)
     {
-        await ResetAllDataAsync();
-        
         var result = await _sut.ListDetailAsync();
 
         result.ShouldNotBeNull();
@@ -259,7 +252,5 @@ public class ProductRepositoryTests : IntegrationTest
         
         result.ShouldNotBeNull();
         result.IsDeleted.ShouldBe(true);
-        
-        await ResetAllDataAsync();
     }
 }

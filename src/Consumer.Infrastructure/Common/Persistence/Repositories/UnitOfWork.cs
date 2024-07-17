@@ -23,8 +23,8 @@ public class UnitOfWork : IUnitOfWork
     {
         _session = session;
         _context = context;
-        CustomerRepository = new CustomerRepository(_session, _context);
-        ProductRepository = new ProductRepository(_session, _context);
+        CustomerRepository = new CustomerEntityFrameworkRepository(_session, _context);
+        ProductRepository = new ProductEntityFrameworkRepository(_session, _context);
         _orderingService = orderingService;
     }
 

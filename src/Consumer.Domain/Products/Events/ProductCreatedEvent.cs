@@ -57,6 +57,7 @@ public sealed record ProductCreatedEvent : ProductEvent
     public required string Brand { get; init; }
     public required string Model { get; init; }
     public SerialId? SerialId { get; init; }
+    public int? SerialIdValue => SerialId?.Value;
     public CustomerId? OwnerId { get; init; }
     public string? OwnerName { get; init; }
     public CustomerId? DealerId { get; init; }

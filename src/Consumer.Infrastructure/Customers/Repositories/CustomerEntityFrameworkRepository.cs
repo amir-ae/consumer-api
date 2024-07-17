@@ -9,19 +9,19 @@ using Consumer.Infrastructure.Common.Persistence;
 
 namespace Consumer.Infrastructure.Customers.Repositories;
 
-public class CustomerRepository : ICustomerRepository
+public class CustomerEntityFrameworkRepository : ICustomerRepository
 {
     private readonly Marten.IDocumentSession _session;
     private readonly ConsumerDbContext _context;
 
-    public CustomerRepository(Marten.IDocumentSession session, ConsumerDbContext context)
+    public CustomerEntityFrameworkRepository(Marten.IDocumentSession session, ConsumerDbContext context)
     {
         _session = session;
         _context = context;
     }
     
     private static readonly Func<ConsumerDbContext, CustomerId, CancellationToken, Task<bool>> CheckByIdFuncAsync =
-        EF.CompileAsyncQuery((ConsumerDbContext context, CustomerId id, CancellationToken ct) => context.Customers
+        EF.CompileAsyncQuery((ConsumerDbContext context, CustomerId id, CancellationToken ct) => context.Customers.AsNoTracking()
             .Any(x => x.Id == id));
 
     public async Task<bool> CheckByIdAsync(CustomerId id, CancellationToken ct = default)
@@ -30,7 +30,7 @@ public class CustomerRepository : ICustomerRepository
     }
 
     private static readonly Func<ConsumerDbContext, CustomerId, CancellationToken, Task<Customer?>> ByIdFuncAsync =
-            EF.CompileAsyncQuery((ConsumerDbContext context, CustomerId id, CancellationToken ct) => context.Customers
+            EF.CompileAsyncQuery((ConsumerDbContext context, CustomerId id, CancellationToken ct) => context.Customers.AsNoTracking()
                 .FirstOrDefault(x => x.Id == id));
     
     public async Task<Customer?> ByIdAsync(CustomerId id, CancellationToken ct = default)
@@ -44,7 +44,7 @@ public class CustomerRepository : ICustomerRepository
      }
      
     private static readonly Func<ConsumerDbContext, string, string, CancellationToken, Task<Customer?>> ByDataFuncAsync =
-        EF.CompileAsyncQuery((ConsumerDbContext context, string fullName, string phoneNumber, CancellationToken ct) => context.Customers
+        EF.CompileAsyncQuery((ConsumerDbContext context, string fullName, string phoneNumber, CancellationToken ct) => context.Customers.AsNoTracking()
             .FirstOrDefault(x => x.FullName == fullName && x.PhoneNumber.Value == phoneNumber));
     
     public async Task<Customer?> ByDataAsync(string fullName, string phoneNumber, CancellationToken ct = default)
@@ -53,7 +53,7 @@ public class CustomerRepository : ICustomerRepository
     }
     
     private static readonly Func<ConsumerDbContext, CustomerId, CancellationToken, Task<Customer?>> DetailByIdFuncAsync =
-        EF.CompileAsyncQuery((ConsumerDbContext context, CustomerId id, CancellationToken ct) => context.Customers
+        EF.CompileAsyncQuery((ConsumerDbContext context, CustomerId id, CancellationToken ct) => context.Customers.AsNoTracking()
             .Include(x => x.CustomerProducts).ThenInclude(cp => cp.Product)
             .FirstOrDefault(x => x.Id == id));
      
@@ -72,7 +72,7 @@ public class CustomerRepository : ICustomerRepository
 
     public async Task<List<Customer>> DetailByIdsAsync(List<CustomerId> ids, CancellationToken ct = default)
     {
-        return await _context.Customers
+        return await _context.Customers.AsNoTracking()
             .Include(x => x.CustomerProducts)
             .ThenInclude(cp => cp.Product)
             .Where(x => ids.Contains(x.Id)).ToListAsync(ct);
@@ -85,22 +85,22 @@ public class CustomerRepository : ICustomerRepository
     }
 
     private static readonly Func<ConsumerDbContext, int, int, IAsyncEnumerable<CustomerWrapper>> ByPageFuncAsync =
-        EF.CompileAsyncQuery((ConsumerDbContext context, int skipSize, int pageSize) => context.Customers
+        EF.CompileAsyncQuery((ConsumerDbContext context, int skipSize, int pageSize) => context.Customers.AsNoTracking()
             .Where(x => x.IsDeleted != true)
             .OrderByDescending(x => x.CreatedAt)
             .ThenByDescending(x => x.LastModifiedAt)
             .Skip(skipSize)
             .Take(pageSize)
-            .Select(c => new CustomerWrapper { Customer = c, TotalCount = context.Customers.Count() }));
+            .Select(c => new CustomerWrapper { Customer = c, TotalCount = context.Customers.AsNoTracking().Count() }));
     
     private static readonly Func<ConsumerDbContext, int, int, CentreId, IAsyncEnumerable<CustomerWrapper>> ByCentrePageFuncAsync =
-        EF.CompileAsyncQuery((ConsumerDbContext context, int skipSize, int pageSize, CentreId centreId) => context.Customers
+        EF.CompileAsyncQuery((ConsumerDbContext context, int skipSize, int pageSize, CentreId centreId) => context.Customers.AsNoTracking().AsNoTracking()
             .Where(x => x.IsDeleted != true && x.CustomerOrders.Any(co => co.CentreId == centreId))
             .OrderByDescending(x => x.CreatedAt)
             .ThenByDescending(x => x.LastModifiedAt)
             .Skip(skipSize)
             .Take(pageSize)
-            .Select(c => new CustomerWrapper { Customer = c, TotalCount = context.Customers.Count() }));
+            .Select(c => new CustomerWrapper { Customer = c, TotalCount = context.Customers.AsNoTracking().Count() }));
 
     public async Task<(List<Customer>, long)> ByPageAsync(int pageSize, int pageNumber, bool? nextPage, CustomerId? keyId,
         CentreId? centreId = null, CancellationToken ct = default)
@@ -120,7 +120,7 @@ public class CustomerRepository : ICustomerRepository
         else
         {
             var keyRecord = await ByIdAsync(keyId, ct);
-            IQueryable<Customer> query = _context.Customers.Where(c => c.IsDeleted != true);
+            IQueryable<Customer> query = _context.Customers.AsNoTracking().Where(c => c.IsDeleted != true);
                 
             if (centreId is not null)
             {
@@ -132,14 +132,14 @@ public class CustomerRepository : ICustomerRepository
                 result = await query.Where(c => c.CreatedAt < keyRecord!.CreatedAt && (!keyRecord.LastModifiedAt.HasValue 
                             || !c.LastModifiedAt.HasValue || c.LastModifiedAt < keyRecord.LastModifiedAt))
                         .OrderByDescending(c => c.CreatedAt).ThenByDescending(c => c.LastModifiedAt).Take(pageSize)
-                        .Select(c => new CustomerWrapper { Customer = c, TotalCount = _context.Customers.Count() }).ToListAsync(ct);
+                        .Select(c => new CustomerWrapper { Customer = c, TotalCount = _context.Customers.AsNoTracking().Count() }).ToListAsync(ct);
             }
             else
             {
                 result = await query.Where(c => c.CreatedAt > keyRecord!.CreatedAt && (!keyRecord.LastModifiedAt.HasValue 
                             || !c.LastModifiedAt.HasValue || c.LastModifiedAt > keyRecord.LastModifiedAt))
                         .OrderBy(c => c.CreatedAt).ThenBy(c => c.LastModifiedAt).Take(pageSize)
-                        .Select(c => new CustomerWrapper { Customer = c, TotalCount = _context.Customers.Count() }).ToListAsync(ct);
+                        .Select(c => new CustomerWrapper { Customer = c, TotalCount = _context.Customers.AsNoTracking().Count() }).ToListAsync(ct);
 
                 result = result.OrderByDescending(c => c.Customer.CreatedAt).ThenByDescending(c => c.Customer.LastModifiedAt).ToList();
             }
@@ -152,24 +152,24 @@ public class CustomerRepository : ICustomerRepository
     }
 
     private static readonly Func<ConsumerDbContext, int, int, IAsyncEnumerable<CustomerWrapper>> ByPageDetailFuncAsync =
-        EF.CompileAsyncQuery((ConsumerDbContext context, int skipSize, int pageSize) => context.Customers
+        EF.CompileAsyncQuery((ConsumerDbContext context, int skipSize, int pageSize) => context.Customers.AsNoTracking()
             .Include(x => x.CustomerProducts).ThenInclude(cp => cp.Product)
             .Where(x => x.IsDeleted != true)
             .OrderByDescending(x => x.CreatedAt)
             .ThenByDescending(x => x.LastModifiedAt)
             .Skip(skipSize)
             .Take(pageSize)
-            .Select(c => new CustomerWrapper { Customer = c, TotalCount = context.Customers.Count() }));
+            .Select(c => new CustomerWrapper { Customer = c, TotalCount = context.Customers.AsNoTracking().Count() }));
     
     private static readonly Func<ConsumerDbContext, int, int, CentreId, IAsyncEnumerable<CustomerWrapper>> ByCentrePageDetailFuncAsync =
-        EF.CompileAsyncQuery((ConsumerDbContext context, int skipSize, int pageSize, CentreId centreId) => context.Customers
+        EF.CompileAsyncQuery((ConsumerDbContext context, int skipSize, int pageSize, CentreId centreId) => context.Customers.AsNoTracking()
             .Include(x => x.CustomerProducts).ThenInclude(cp => cp.Product)
             .Where(x => x.IsDeleted != true && x.CustomerOrders.Any(co => co.CentreId == centreId))
             .OrderByDescending(x => x.CreatedAt)
             .ThenByDescending(x => x.LastModifiedAt)
             .Skip(skipSize)
             .Take(pageSize)
-            .Select(c => new CustomerWrapper { Customer = c, TotalCount = context.Customers.Count() }));
+            .Select(c => new CustomerWrapper { Customer = c, TotalCount = context.Customers.AsNoTracking().Count() }));
 
     public async Task<(List<Customer>, long)> ByPageDetailAsync(int pageSize, int pageNumber, bool? nextPage, CustomerId? keyId,
         CentreId? centreId = null, CancellationToken ct = default)
@@ -189,7 +189,7 @@ public class CustomerRepository : ICustomerRepository
         else
         {
             var keyRecord = await ByIdAsync(keyId, ct);
-            IQueryable<Customer> query = _context.Customers.Where(c => c.IsDeleted != true);
+            IQueryable<Customer> query = _context.Customers.AsNoTracking().Where(c => c.IsDeleted != true);
                 
             if (centreId is not null)
             {
@@ -202,7 +202,7 @@ public class CustomerRepository : ICustomerRepository
                         .Where(c => c.CreatedAt < keyRecord!.CreatedAt && (!keyRecord.LastModifiedAt.HasValue 
                                                                            || !c.LastModifiedAt.HasValue || c.LastModifiedAt < keyRecord.LastModifiedAt))
                         .OrderByDescending(c => c.CreatedAt).ThenByDescending(c => c.LastModifiedAt).Take(pageSize)
-                        .Select(c => new CustomerWrapper { Customer = c, TotalCount = _context.Customers.Count() }).ToListAsync(ct);
+                        .Select(c => new CustomerWrapper { Customer = c, TotalCount = _context.Customers.AsNoTracking().Count() }).ToListAsync(ct);
             }
             else
             {
@@ -210,7 +210,7 @@ public class CustomerRepository : ICustomerRepository
                         .Where(c => c.CreatedAt > keyRecord!.CreatedAt && (!keyRecord.LastModifiedAt.HasValue 
                                                                            || !c.LastModifiedAt.HasValue || c.LastModifiedAt > keyRecord.LastModifiedAt))
                         .OrderBy(c => c.CreatedAt).ThenBy(c => c.LastModifiedAt).Take(pageSize)
-                        .Select(c => new CustomerWrapper { Customer = c, TotalCount = _context.Customers.Count() }).ToListAsync(ct);
+                        .Select(c => new CustomerWrapper { Customer = c, TotalCount = _context.Customers.AsNoTracking().Count() }).ToListAsync(ct);
 
                 result = result.OrderByDescending(c => c.Customer.CreatedAt).ThenByDescending(c => c.Customer.LastModifiedAt).ToList();
             }
@@ -223,11 +223,11 @@ public class CustomerRepository : ICustomerRepository
     }
 
     private static readonly Func<ConsumerDbContext, IAsyncEnumerable<Customer>> ListFuncAsync =
-        EF.CompileAsyncQuery((ConsumerDbContext context) => context.Customers
+        EF.CompileAsyncQuery((ConsumerDbContext context) => context.Customers.AsNoTracking()
             .Where(customer => customer.IsDeleted != true));
     
     private static readonly Func<ConsumerDbContext, CentreId, IAsyncEnumerable<Customer>> ByCentreIdFuncAsync =
-        EF.CompileAsyncQuery((ConsumerDbContext context, CentreId centreId) => context.Customers
+        EF.CompileAsyncQuery((ConsumerDbContext context, CentreId centreId) => context.Customers.AsNoTracking()
             .Where(customer => customer.IsDeleted != true 
                                && customer.CustomerOrders.Any(co => co.CentreId == centreId)));
     
@@ -240,19 +240,16 @@ public class CustomerRepository : ICustomerRepository
         {
             result.Add(item);
         }
-        return result
-            .OrderByDescending(c => c.CreatedAt)
-            .ThenByDescending(c => c.LastModifiedAt)
-            .ToList();
+        return result.ToList();
     }
 
     private static readonly Func<ConsumerDbContext, IAsyncEnumerable<Customer>> ListDetailFuncAsync =
-        EF.CompileAsyncQuery((ConsumerDbContext context) => context.Customers
+        EF.CompileAsyncQuery((ConsumerDbContext context) => context.Customers.AsNoTracking()
             .Include(c => c.CustomerProducts).ThenInclude(cp => cp.Product)
             .Where(customer => customer.IsDeleted != true));
     
     private static readonly Func<ConsumerDbContext, CentreId, IAsyncEnumerable<Customer>> ByCentreIdDetailFuncAsync =
-        EF.CompileAsyncQuery((ConsumerDbContext context, CentreId centreId) => context.Customers
+        EF.CompileAsyncQuery((ConsumerDbContext context, CentreId centreId) => context.Customers.AsNoTracking()
             .Include(c => c.CustomerProducts).ThenInclude(cp => cp.Product)
             .Where(customer => customer.IsDeleted != true 
                                && customer.CustomerOrders.Any(co => co.CentreId == centreId)));
@@ -266,10 +263,7 @@ public class CustomerRepository : ICustomerRepository
         {
             result.Add(item);
         }
-        return result
-            .OrderByDescending(c => c.CreatedAt)
-            .ThenByDescending(c => c.LastModifiedAt)
-            .ToList();
+        return result.ToList();
     }
 
     public Customer Create(CustomerCreatedEvent customerCreatedEvent)

@@ -1,10 +1,10 @@
-﻿using Consumer.API.Contract.V1.Customers.Responses;
+﻿using System.Collections.Concurrent;
+using Consumer.API.Contract.V1.Customers.Responses;
 using MediatR;
 using ErrorOr;
 using Consumer.Application.Common.Interfaces.Persistence;
 using Consumer.Application.Common.Interfaces.Services;
 using Mapster;
-using ValueTaskSupplement;
 
 namespace Consumer.Application.Customers.Queries.ListDetail;
 
@@ -25,9 +25,17 @@ public sealed class ListCustomersDetailQueryHandler : IRequestHandler<ListCustom
         
         var customers = await _customerRepository.ListDetailAsync(centreId, ct);
         
-        var tasks = customers.Adapt<List<CustomerResponse>>()
-            .Select(customer => _enrichmentService.EnrichCustomerResponse(customer, ct));
+        var customerResponses = new ConcurrentBag<CustomerResponse>();
+
+        await Parallel.ForEachAsync(customers, ct, async (customer, token) =>
+        {
+            var customerResponse = customer.Adapt<CustomerResponse>();
+            customerResponses.Add(await _enrichmentService.EnrichCustomerResponse(customerResponse, token));
+        });
         
-        return await ValueTaskEx.WhenAll(tasks);
+        return customerResponses
+            .OrderByDescending(x => x.CreatedAt)
+            .ThenByDescending(x => x.LastModifiedAt)
+            .ToArray();
     }
 }

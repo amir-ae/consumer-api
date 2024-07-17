@@ -40,10 +40,12 @@ public class ProductEntityConfiguration : IEntityTypeConfiguration<Product>
         
         builder.Property(p => p.OwnerId)
             .HasColumnName(nameof(Product.OwnerId).ToSnakeCase())
+            .HasMaxLength(36)
             .HasConversion(new NullableCustomerIdValueConverter());
         
         builder.Property(p => p.DealerId)
             .HasColumnName(nameof(Product.DealerId).ToSnakeCase())
+            .HasMaxLength(36)
             .HasConversion(new NullableCustomerIdValueConverter());
         
         builder.Property(p => p.DeviceType)
@@ -74,7 +76,6 @@ public class ProductEntityConfiguration : IEntityTypeConfiguration<Product>
         
         builder.Property(b => b.IsUnrepairable)
             .HasColumnName(nameof(Product.IsUnrepairable).ToSnakeCase())
-            .HasConversion(new BooleanValueConverter())
             .HasDefaultValue(false)
             .IsRequired();
         
@@ -119,13 +120,11 @@ public class ProductEntityConfiguration : IEntityTypeConfiguration<Product>
         
         builder.Property(b => b.IsActive)
             .HasColumnName(nameof(Product.IsActive).ToSnakeCase())
-            .HasConversion(new BooleanValueConverter())
             .HasDefaultValue(true)
             .IsRequired();
         
         builder.Property(b => b.IsDeleted)
             .HasColumnName(nameof(Product.IsDeleted).ToSnakeCase())
-            .HasConversion(new BooleanValueConverter())
             .HasDefaultValue(false)
             .IsRequired();
     }

@@ -39,8 +39,8 @@ namespace Consumer.Infrastructure.Migrations
                     last_modified_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
                     last_modified_by = table.Column<Guid>(type: "uuid", nullable: true),
                     version = table.Column<int>(type: "integer", nullable: false),
-                    is_active = table.Column<int>(type: "integer", nullable: false, defaultValue: 1),
-                    is_deleted = table.Column<int>(type: "integer", nullable: false, defaultValue: 0)
+                    is_active = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true),
+                    is_deleted = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false)
                 },
                 constraints: table =>
                 {
@@ -56,8 +56,8 @@ namespace Consumer.Infrastructure.Migrations
                     brand = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     model = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                     serial_id = table.Column<int>(type: "integer", nullable: true),
-                    owner_id = table.Column<string>(type: "text", nullable: true),
-                    dealer_id = table.Column<string>(type: "text", nullable: true),
+                    owner_id = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: true),
+                    dealer_id = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: true),
                     device_type = table.Column<string>(type: "character varying(30)", maxLength: 30, nullable: true),
                     panel_model = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
                     panel_serial_number = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
@@ -65,7 +65,7 @@ namespace Consumer.Infrastructure.Migrations
                     date_of_purchase = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
                     invoice_number = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
                     purchase_price = table.Column<decimal>(type: "numeric", nullable: true),
-                    is_unrepairable = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
+                    is_unrepairable = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
                     date_of_demand_for_compensation = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
                     demander_full_name = table.Column<string>(type: "character varying(150)", maxLength: 150, nullable: true),
                     product_orders = table.Column<string>(type: "text", nullable: false),
@@ -75,8 +75,8 @@ namespace Consumer.Infrastructure.Migrations
                     last_modified_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
                     last_modified_by = table.Column<Guid>(type: "uuid", nullable: true),
                     version = table.Column<int>(type: "integer", nullable: false),
-                    is_active = table.Column<int>(type: "integer", nullable: false, defaultValue: 1),
-                    is_deleted = table.Column<int>(type: "integer", nullable: false, defaultValue: 0)
+                    is_active = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true),
+                    is_deleted = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false)
                 },
                 constraints: table =>
                 {

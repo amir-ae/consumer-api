@@ -1,4 +1,5 @@
-﻿using Consumer.Domain.Common.Entities;
+﻿using System.Runtime.Serialization;
+using Consumer.Domain.Common.Entities;
 using Consumer.Domain.Common.Models;
 using Consumer.Domain.Common.ValueObjects;
 using Consumer.Domain.Customers.Events;
@@ -20,6 +21,7 @@ public sealed class Customer : AggregateRoot<CustomerId, string>
     public CustomerRole Role { get; private set; }
     public HashSet<CustomerOrder> CustomerOrders { get; private set; }
     public HashSet<ProductId> ProductIds { get; private set; }
+    [IgnoreDataMember]
     public HashSet<CustomerProduct> CustomerProducts { get; private set; } = new();
 
     public CustomerEventHandler<CustomerEvent> CustomerEventHandler { get; } = new();
@@ -325,6 +327,7 @@ public sealed class Customer : AggregateRoot<CustomerId, string>
         FullName = changed.FullName;
         LastModifiedAt = changed.NameChangedAt;
         LastModifiedBy = changed.Actor;
+        Version++;
     }
 
     public void Apply(CustomerPhoneNumberChangedEvent changed)
@@ -332,6 +335,7 @@ public sealed class Customer : AggregateRoot<CustomerId, string>
         PhoneNumber = changed.PhoneNumber;
         LastModifiedAt = changed.PhoneNumberChangedAt;
         LastModifiedBy = changed.Actor;
+        Version++;
     }
 
     public void Apply(CustomerAddressChangedEvent changed)
@@ -340,6 +344,7 @@ public sealed class Customer : AggregateRoot<CustomerId, string>
         Address = changed.Address;
         LastModifiedAt = changed.AddressChangedAt;
         LastModifiedBy = changed.Actor;
+        Version++;
     }
 
     public void Apply(CustomerRoleChangedEvent changed)
@@ -347,6 +352,7 @@ public sealed class Customer : AggregateRoot<CustomerId, string>
         Role = changed.Role;
         LastModifiedAt = changed.RoleChangedAt;
         LastModifiedBy = changed.Actor;
+        Version++;
     }
 
     public void Apply(CustomerProductAddedEvent added)
@@ -354,6 +360,7 @@ public sealed class Customer : AggregateRoot<CustomerId, string>
         ProductIds.Add(added.ProductId);
         LastModifiedAt = added.ProductAddedAt;
         LastModifiedBy = added.Actor;
+        Version++;
     }
 
     public void Apply(CustomerProductRemovedEvent removed)
@@ -361,6 +368,7 @@ public sealed class Customer : AggregateRoot<CustomerId, string>
         ProductIds.Remove(removed.ProductId);
         LastModifiedAt = removed.ProductRemovedAt;
         LastModifiedBy = removed.Actor;
+        Version++;
     }
     
     public void Apply(CustomerOrderAddedEvent added)
@@ -368,6 +376,7 @@ public sealed class Customer : AggregateRoot<CustomerId, string>
         CustomerOrders.Add(added.Order);
         LastModifiedAt = added.OrderAddedAt;
         LastModifiedBy = added.Actor;
+        Version++;
     }
 
     public void Apply(CustomerOrderRemovedEvent removed)
@@ -375,6 +384,7 @@ public sealed class Customer : AggregateRoot<CustomerId, string>
         CustomerOrders.Remove(removed.Order);
         LastModifiedAt = removed.OrderRemovedAt;
         LastModifiedBy = removed.Actor;
+        Version++;
     }
 
     public void Apply(CustomerActivatedEvent activated)
@@ -382,6 +392,7 @@ public sealed class Customer : AggregateRoot<CustomerId, string>
         IsActive = true;
         LastModifiedAt = activated.ActivatedAt;
         LastModifiedBy = activated.Actor;
+        Version++;
     }
 
     public void Apply(CustomerDeactivatedEvent deactivated)
@@ -389,6 +400,7 @@ public sealed class Customer : AggregateRoot<CustomerId, string>
         IsActive = false;
         LastModifiedAt = deactivated.DeactivatedAt;
         LastModifiedBy = deactivated.Actor;
+        Version++;
     }
 
     public void Apply(CustomerDeletedEvent deleted)
@@ -397,6 +409,7 @@ public sealed class Customer : AggregateRoot<CustomerId, string>
         IsDeleted = true;
         LastModifiedAt = deleted.DeletedAt;
         LastModifiedBy = deleted.Actor;
+        Version++;
     }
 
     public void Apply(CustomerUndeletedEvent undeleted)
@@ -405,6 +418,52 @@ public sealed class Customer : AggregateRoot<CustomerId, string>
         IsDeleted = false;
         LastModifiedAt = undeleted.UndeletedAt;
         LastModifiedBy = undeleted.Actor;
+        Version++;
+    }
+    
+    public void Apply(CustomerEvent @event)
+    {
+        switch (@event)
+        {
+            case CustomerNameChangedEvent nameChangedEvent:
+                Apply(nameChangedEvent);
+                break;
+            case CustomerAddressChangedEvent addressChangedEvent:
+                Apply(addressChangedEvent);
+                break;
+            case CustomerPhoneNumberChangedEvent phoneNumberChangedEvent:
+                Apply(phoneNumberChangedEvent);
+                break;
+            case CustomerRoleChangedEvent roleChangedEvent:
+                Apply(roleChangedEvent);
+                break;
+            case CustomerProductAddedEvent productAddedEvent:
+                Apply(productAddedEvent);
+                break;
+            case CustomerProductRemovedEvent productRemovedEvent:
+                Apply(productRemovedEvent);
+                break;
+            case CustomerOrderAddedEvent orderAddedEvent:
+                Apply(orderAddedEvent);
+                break;
+            case CustomerOrderRemovedEvent orderRemovedEvent:
+                Apply(orderRemovedEvent);
+                break;
+            case CustomerActivatedEvent activatedEvent:
+                Apply(activatedEvent);
+                break;
+            case CustomerDeactivatedEvent deactivatedEvent:
+                Apply(deactivatedEvent);
+                break;
+            case CustomerDeletedEvent deletedEvent:
+                Apply(deletedEvent);
+                break;
+            case CustomerUndeletedEvent undeletedEvent:
+                Apply(undeletedEvent);
+                break;
+            default:
+                throw new InvalidOperationException($"Unhandled customer event type {@event.GetType()}");
+        }
     }
 
 #pragma warning disable CS8618

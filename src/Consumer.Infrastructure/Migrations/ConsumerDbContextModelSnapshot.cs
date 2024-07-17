@@ -134,16 +134,16 @@ namespace Consumer.Infrastructure.Migrations
                         .HasColumnType("character varying(150)")
                         .HasColumnName("full_name");
 
-                    b.Property<int>("IsActive")
+                    b.Property<bool>("IsActive")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(1)
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
                         .HasColumnName("is_active");
 
-                    b.Property<int>("IsDeleted")
+                    b.Property<bool>("IsDeleted")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(0)
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
                         .HasColumnName("is_deleted");
 
                     b.Property<DateTimeOffset?>("LastModifiedAt")
@@ -221,7 +221,8 @@ namespace Consumer.Infrastructure.Migrations
                         .HasColumnName("date_of_purchase");
 
                     b.Property<string>("DealerId")
-                        .HasColumnType("text")
+                        .HasMaxLength(36)
+                        .HasColumnType("character varying(36)")
                         .HasColumnName("dealer_id");
 
                     b.Property<string>("DemanderFullName")
@@ -239,22 +240,22 @@ namespace Consumer.Infrastructure.Migrations
                         .HasColumnType("character varying(50)")
                         .HasColumnName("invoice_number");
 
-                    b.Property<int>("IsActive")
+                    b.Property<bool>("IsActive")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(1)
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
                         .HasColumnName("is_active");
 
-                    b.Property<int>("IsDeleted")
+                    b.Property<bool>("IsDeleted")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(0)
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
                         .HasColumnName("is_deleted");
 
-                    b.Property<int>("IsUnrepairable")
+                    b.Property<bool>("IsUnrepairable")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(0)
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
                         .HasColumnName("is_unrepairable");
 
                     b.Property<DateTimeOffset?>("LastModifiedAt")
@@ -272,7 +273,8 @@ namespace Consumer.Infrastructure.Migrations
                         .HasColumnName("model");
 
                     b.Property<string>("OwnerId")
-                        .HasColumnType("text")
+                        .HasMaxLength(36)
+                        .HasColumnType("character varying(36)")
                         .HasColumnName("owner_id");
 
                     b.Property<string>("PanelModel")

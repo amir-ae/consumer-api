@@ -208,9 +208,7 @@ public class CustomerMartenRepository : ICustomerRepository
     public class ListQuery : ICompiledListQuery<Customer>
     {
         public Expression<Func<IMartenQueryable<Customer>, IEnumerable<Customer>>> QueryIs() => query 
-            => query.Where(x => !x.IsDeleted)
-                .OrderByDescending(x => x.CreatedAt)
-                .ThenByDescending(x => x.LastModifiedAt);
+            => query.Where(x => !x.IsDeleted);
     }
     
     public class ByCentreIdQuery : ICompiledListQuery<Customer>
@@ -218,9 +216,7 @@ public class CustomerMartenRepository : ICustomerRepository
         public Guid CentreId { get; init; }
         public Expression<Func<IMartenQueryable<Customer>, IEnumerable<Customer>>> QueryIs() => query
              => query.Where(x => !x.IsDeleted 
-                                         && x.CustomerOrders.Any(o => o.CentreId != null! && o.CentreId.Value == CentreId))
-                .OrderByDescending(x => x.CreatedAt)
-                .ThenByDescending(x => x.LastModifiedAt);
+                                         && x.CustomerOrders.Any(o => o.CentreId != null! && o.CentreId.Value == CentreId));
     }
     
     public async Task<List<Customer>> ListAsync(CentreId? centreId = null, CancellationToken ct = default)
@@ -235,18 +231,14 @@ public class CustomerMartenRepository : ICustomerRepository
     public class ListProductsQuery : ICompiledListQuery<Product>
     {
         public Expression<Func<IMartenQueryable<Product>, IEnumerable<Product>>> QueryIs() => query 
-            => query.Where(x => !x.IsDeleted)
-                .OrderByDescending(x => x.CreatedAt)
-                .ThenByDescending(x => x.LastModifiedAt);
+            => query.Where(x => !x.IsDeleted);
     }
     
     public class ByCentreIdProductsQuery : ICompiledListQuery<Product>
     {
         public Guid CentreId { get; init; }
         public Expression<Func<IMartenQueryable<Product>, IEnumerable<Product>>> QueryIs() => query
-             => query.Where(x => !x.IsDeleted && x.ProductOrders.Any(o => o.CentreId != null! && o.CentreId.Value == CentreId))
-                .OrderByDescending(x => x.CreatedAt)
-                .ThenByDescending(x => x.LastModifiedAt);
+             => query.Where(x => !x.IsDeleted && x.ProductOrders.Any(o => o.CentreId != null! && o.CentreId.Value == CentreId));
     }
 
     public async Task<List<Customer>> ListDetailAsync(CentreId? centreId = null, CancellationToken ct = default)

@@ -35,5 +35,20 @@
         <HintPath>Common\ExternalDll\Catalog.API.Contract.dll</HintPath>
       </Reference>
     </ItemGroup>
+
+    <ItemGroup>
+      <Compile Remove="Products\Projections\**" />
+      <Compile Remove="Customers\Projections\**" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <EmbeddedResource Remove="Products\Projections\**" />
+      <EmbeddedResource Remove="Customers\Projections\**" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Remove="Products\Projections\**" />
+      <None Remove="Customers\Projections\**" />
+    </ItemGroup>
     
 </Project>

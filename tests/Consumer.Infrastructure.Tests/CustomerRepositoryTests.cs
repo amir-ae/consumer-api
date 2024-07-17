@@ -14,13 +14,11 @@ namespace Consumer.Infrastructure.Tests;
 
 public class CustomerRepositoryTests : IntegrationTest
 {
-    private readonly CustomerRepository _sut;
+    private readonly CustomerMartenRepository _sut;
 
     public CustomerRepositoryTests(ConsumerApplicationFactory<Program> factory) : base(factory)
     {
-        Mock<IDocumentSession> docSession = new();
-        Mock<ConsumerDbContext> dbContext = new();
-        _sut = new CustomerRepository(docSession.Object, dbContext.Object);
+        _sut = new CustomerMartenRepository(OpenSession());
     }
 
     [Fact, TestPriority(1)]
@@ -49,7 +47,7 @@ public class CustomerRepositoryTests : IntegrationTest
 
         result.ShouldNotBeNull();
         result.Count.ShouldBe(count);
-        result.All(c => c.CustomerProducts?.FirstOrDefault() != null).ShouldBeTrue();
+        result.All(c => c.CustomerProducts.FirstOrDefault() != null).ShouldBeTrue();
     }
     
     [Theory, TestPriority(4)]
@@ -92,7 +90,7 @@ public class CustomerRepositoryTests : IntegrationTest
 
         result.ShouldNotBeNull();
         result.Id.ShouldBe(id);
-        result.CustomerProducts?.FirstOrDefault().ShouldNotBeNull();
+        result.CustomerProducts.FirstOrDefault().ShouldNotBeNull();
     }
 
     [Theory, TestPriority(8)]

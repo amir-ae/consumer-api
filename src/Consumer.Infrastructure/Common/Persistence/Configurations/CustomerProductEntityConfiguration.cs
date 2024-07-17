@@ -1,4 +1,6 @@
 ﻿using Consumer.Domain.Common.Entities;
+using Consumer.Infrastructure.Customers.ValueConverters;
+using Consumer.Infrastructure.Products.ValueConverters;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -15,12 +17,14 @@ public class CustomerProductEntityConfiguration : IEntityTypeConfiguration<Custo
         builder
             .Property(cp => cp.CustomerId)
             .HasColumnName("customer_id")
-            .HasMaxLength(36);
+            .HasMaxLength(36)
+            .HasConversion(new CustomerIdValueConverter());
 
         builder
             .Property(cp => cp.ProductId)
             .HasColumnName("product_id")
-            .HasMaxLength(50);
+            .HasMaxLength(50)
+            .HasConversion(new ProductIdValueConverter());;
 
         builder
             .HasOne(cp => cp.Customer)

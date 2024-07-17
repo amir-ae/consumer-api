@@ -1,4 +1,5 @@
-﻿using Consumer.Domain.Customers;
+﻿using System.Runtime.Serialization;
+using Consumer.Domain.Customers;
 using Consumer.Domain.Customers.ValueObjects;
 using Consumer.Domain.Common.Models;
 using Consumer.Domain.Common.ValueObjects;
@@ -26,6 +27,7 @@ public sealed class Product : AggregateRoot<ProductId, string>
     public DateTimeOffset? DateOfDemandForCompensation { get; private set; }
     public string? DemanderFullName { get; private set; }
     public HashSet<ProductOrder> ProductOrders { get; private set; }
+    [IgnoreDataMember]
     public HashSet<CustomerProduct> ProductCustomers { get; private set; } = new();
     
     public ProductEventHandler<ProductEvent> ProductEventHandler { get; } = new();
@@ -405,15 +407,19 @@ public sealed class Product : AggregateRoot<ProductId, string>
     public void Apply(ProductBrandChangedEvent changed)
     {
         Brand = changed.Brand;
+        SerialId = null;
         LastModifiedAt = changed.BrandChangedAt;
         LastModifiedBy = changed.Actor;
+        Version++;
     }
 
     public void Apply(ProductModelChangedEvent changed)
     {
         Model = changed.Model;
+        SerialId = null;
         LastModifiedAt = changed.ModelChangedAt;
         LastModifiedBy = changed.Actor;
+        Version++;
     }
 
     public void Apply(ProductOwnerChangedEvent changed)
@@ -421,6 +427,7 @@ public sealed class Product : AggregateRoot<ProductId, string>
         OwnerId = changed.OwnerId;
         LastModifiedAt = changed.OwnerChangedAt;
         LastModifiedBy = changed.Actor;
+        Version++;
     }
 
     public void Apply(ProductDealerChangedEvent changed)
@@ -428,6 +435,7 @@ public sealed class Product : AggregateRoot<ProductId, string>
         DealerId = changed.DealerId;
         LastModifiedAt = changed.DealerChangedAt;
         LastModifiedBy = changed.Actor;
+        Version++;
     }
 
     public void Apply(ProductOrderAddedEvent added)
@@ -435,6 +443,7 @@ public sealed class Product : AggregateRoot<ProductId, string>
         ProductOrders.Add(added.Order);
         LastModifiedAt = added.OrderAddedAt;
         LastModifiedBy = added.Actor;
+        Version++;
     }
 
     public void Apply(ProductOrderRemovedEvent removed)
@@ -442,6 +451,7 @@ public sealed class Product : AggregateRoot<ProductId, string>
         ProductOrders.Remove(removed.Order);
         LastModifiedAt = removed.OrderRemovedAt;
         LastModifiedBy = removed.Actor;
+        Version++;
     }
 
     public void Apply(ProductDeviceTypeChangedEvent changed)
@@ -449,6 +459,7 @@ public sealed class Product : AggregateRoot<ProductId, string>
         DeviceType = changed.DeviceType;
         LastModifiedAt = changed.DeviceTypeChangedAt;
         LastModifiedBy = changed.Actor;
+        Version++;
     }
 
     public void Apply(ProductPanelChangedEvent changed)
@@ -457,6 +468,7 @@ public sealed class Product : AggregateRoot<ProductId, string>
         PanelSerialNumber = changed.PanelSerialNumber;
         LastModifiedAt = changed.PanelChangedAt;
         LastModifiedBy = changed.Actor;
+        Version++;
     }
 
     public void Apply(ProductWarrantyCardNumberChangedEvent changed)
@@ -464,6 +476,7 @@ public sealed class Product : AggregateRoot<ProductId, string>
         WarrantyCardNumber = changed.WarrantyCardNumber;
         LastModifiedAt = changed.WarrantyCardNumberChangedAt;
         LastModifiedBy = changed.Actor;
+        Version++;
     }
 
 
@@ -474,6 +487,7 @@ public sealed class Product : AggregateRoot<ProductId, string>
         PurchasePrice = changed.PurchasePrice;
         LastModifiedAt = changed.PurchaseDataChangedAt;
         LastModifiedBy = changed.Actor;
+        Version++;
     }
 
     public void Apply(ProductUnrepairableEvent unrepairable)
@@ -483,6 +497,7 @@ public sealed class Product : AggregateRoot<ProductId, string>
         DemanderFullName = unrepairable.DemanderFullName;
         LastModifiedAt = unrepairable.UnrepairableAt;
         LastModifiedBy = unrepairable.Actor;
+        Version++;
     }
 
     public void Apply(ProductActivatedEvent activated)
@@ -490,6 +505,7 @@ public sealed class Product : AggregateRoot<ProductId, string>
         IsActive = true;
         LastModifiedAt = activated.ActivatedAt;
         LastModifiedBy = activated.Actor;
+        Version++;
     }
 
     public void Apply(ProductDeactivatedEvent deactivated)
@@ -497,6 +513,7 @@ public sealed class Product : AggregateRoot<ProductId, string>
         IsActive = false;
         LastModifiedAt = deactivated.DeactivatedAt;
         LastModifiedBy = deactivated.Actor;
+        Version++;
     }
 
     public void Apply(ProductDeletedEvent deleted)
@@ -505,6 +522,7 @@ public sealed class Product : AggregateRoot<ProductId, string>
         IsDeleted = true;
         LastModifiedAt = deleted.DeletedAt;
         LastModifiedBy = deleted.Actor;
+        Version++;
     }
 
     public void Apply(ProductUndeletedEvent undeleted)
@@ -513,8 +531,59 @@ public sealed class Product : AggregateRoot<ProductId, string>
         IsDeleted = false;
         LastModifiedAt = undeleted.UndeletedAt;
         LastModifiedBy = undeleted.Actor;
+        Version++;
     }
 
+    public void Apply(ProductEvent @event)
+    {
+        switch (@event)
+        {
+            case ProductBrandChangedEvent brandChangedEvent:
+                Apply(brandChangedEvent);
+                break;
+            case ProductModelChangedEvent modelChangedEvent:
+                Apply(modelChangedEvent);
+                break;
+            case ProductOwnerChangedEvent ownerChangedEvent:
+                Apply(ownerChangedEvent);
+                break;
+            case ProductDealerChangedEvent dealerChangedEvent:
+                Apply(dealerChangedEvent);
+                break;
+            case ProductOrderAddedEvent orderAddedEvent:
+                Apply(orderAddedEvent);
+                break;
+            case ProductDeviceTypeChangedEvent deviceTypeChangedEvent:
+                Apply(deviceTypeChangedEvent);
+                break;
+            case ProductPanelChangedEvent panelChangedEvent:
+                Apply(panelChangedEvent);
+                break;
+            case ProductWarrantyCardNumberChangedEvent warrantyCardNumberChangedEvent:
+                Apply(warrantyCardNumberChangedEvent);
+                break;
+            case ProductPurchaseDataChangedEvent purchaseDataChangedEvent:
+                Apply(purchaseDataChangedEvent);
+                break;
+            case ProductUnrepairableEvent unrepairableEvent:
+                Apply(unrepairableEvent);
+                break;
+            case ProductActivatedEvent activatedEvent:
+                Apply(activatedEvent);
+                break;
+            case ProductDeactivatedEvent deactivatedEvent:
+                Apply(deactivatedEvent);
+                break;
+            case ProductDeletedEvent deletedEvent:
+                Apply(deletedEvent);
+                break;
+            case ProductUndeletedEvent undeletedEvent:
+                Apply(undeletedEvent);
+                break;
+            default:
+                throw new InvalidOperationException($"Unhandled product event type {@event.GetType()}");
+        }
+    }
 
 #pragma warning disable CS8618
     private Product() { }

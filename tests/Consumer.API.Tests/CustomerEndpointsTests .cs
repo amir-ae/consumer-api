@@ -80,7 +80,7 @@ public class CustomerEndpointsTests : IntegrationTest
         result.ShouldNotBeNull();
         result.PageNumber.ShouldBe(pageNumber);
         result.PageSize.ShouldBe(pageSize);
-        result.Data.Count().ShouldBe(pageSize);
+        result.Data.Count.ShouldBe(pageSize);
     }
 
     [Theory, TestPriority(5)]
@@ -155,7 +155,7 @@ public class CustomerEndpointsTests : IntegrationTest
         var request = new UpdateCustomerRequest(
             Guid.NewGuid(), customer.FirstName, customer.MiddleName, customer.LastName, new PhoneNumber(customer.PhoneNumber.Value));
 
-        var version = 2;
+        var version = 1;
         var eTag = new EntityTagHeaderValue('\"' + version.ToString() + '\"');
         client.DefaultRequestHeaders.TryAddWithoutValidation(HeaderNames.IfMatch, eTag.ToString());
         var response = await client.PatchAsJsonAsync(Customers.Update.Uri(customerId.Value), request);

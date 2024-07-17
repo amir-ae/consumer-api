@@ -101,13 +101,11 @@ public class CustomerEntityConfiguration : IEntityTypeConfiguration<Customer>
         
         builder.Property(b => b.IsActive)
             .HasColumnName(nameof(Customer.IsActive).ToSnakeCase())
-            .HasConversion(new BooleanValueConverter())
             .HasDefaultValue(true)
             .IsRequired();
         
         builder.Property(b => b.IsDeleted)
             .HasColumnName(nameof(Customer.IsDeleted).ToSnakeCase())
-            .HasConversion(new BooleanValueConverter())
             .HasDefaultValue(false)
             .IsRequired();
     }

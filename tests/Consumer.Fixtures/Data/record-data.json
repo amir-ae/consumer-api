@@ -8,9 +8,7 @@
     "LastName": "Mccall",
     "FullName": "Mccall Rae",
     "PhoneNumber": { "Value": "(321) 682-8918", "CountryId": null, "Description": null },
-    "CityId": {
-      "Value": "1"
-    },
+    "CityId": { "Value": 1 },
     "Address": "San Gregorio",
     "Role": 1,
     "ProductIds": [{ "Value": "A" }]
@@ -24,23 +22,23 @@
     "OwnerId": {
       "Value": "1"
     },
-    "CustomerOrders": [{ "OrderId": { "Value": "A" }, "CentreId": { "Value": "14424963-25e4-4731-8501-461750d27037" }}]
+    "ProductOrders": [{ "OrderId": { "Value": "A" }, "CentreId": { "Value": "14424963-25e4-4731-8501-461750d27037" }}]
   },
   "order": {
-    "AppUserId": "9903ED01-A73C-4874-8ABF-D2678E3AE23D",
-    "CentreId": "9903ED01-A73C-4874-8ABF-D2678E3AE23D",
+    "AppUserId": { "Value": "9903ED01-A73C-4874-8ABF-D2678E3AE23D" },
+    "CentreId": { "Value": "9903ED01-A73C-4874-8ABF-D2678E3AE23D" },
     "Owner": {
       "FirstName": "Rae",
       "MiddleName": null,
       "LastName": "Mccall",
       "PhoneNumber": { "Value": "(321) 682-8919", "CountryId": null, "Description": null },
-      "CityId": 1,
+      "CityId": { "Value": 1 },
       "Address": "San Gregorio"
     },
     "Dealer": {
       "Name": "Aspen Coffey",
       "PhoneNumber": { "Value": "514-374-2937", "CountryId": null, "Description": null },
-      "CityId": 2,
+      "CityId": { "Value": 2 },
       "Address": "Klerksdorp"
     },
     "CustomerRole": 1,

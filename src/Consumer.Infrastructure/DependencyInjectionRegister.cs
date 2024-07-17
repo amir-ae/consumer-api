@@ -105,8 +105,8 @@ public static class DependencyInjectionRegister
         var defaultConnection = configuration.GetConnectionString("Default")!;
         AWSConfigs.AWSRegion = "eu-north-1";
 
-        services.AddScoped<ICustomerRepository, CustomerRepository>();
-        services.AddScoped<IProductRepository, ProductRepository>();
+        services.AddScoped<ICustomerRepository, CustomerMartenRepository>();
+        services.AddScoped<IProductRepository, ProductMartenRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IEventSubscriptionManager, EventSubscriptionManager>();
         
@@ -132,6 +132,17 @@ public static class DependencyInjectionRegister
                 MaxRetryAttempts = 2,
             }));
 
+            /*var maintenanceConnection = configuration.GetConnectionString("Maintenance")!;
+            storeOptions.CreateDatabasesForTenants(c =>
+            {
+                c.MaintenanceDatabase(maintenanceConnection);
+                c.ForTenant()
+                    .CheckAgainstPgDatabase()
+                    .WithOwner("postgres")
+                    .WithEncoding("UTF-8")
+                    .ConnectionLimit(-1);
+            });*/
+            
             var stuff = Assembly.GetExecutingAssembly()
                 .DefinedTypes.Where(type => type.IsSubclassOf(typeof(MartenTableMetaDataBase))).ToList();
 
@@ -141,7 +152,8 @@ public static class DependencyInjectionRegister
                 temp.SetTableMetaData(storeOptions);
             }
         })
-            .AddProjectionWithServices<LinkTablesProjection>(ProjectionLifecycle.Inline, ServiceLifetime.Scoped)
+            //.ApplyAllDatabaseChangesOnStartup()
+            .AddProjectionWithServices<FlatTablesProjection>(ProjectionLifecycle.Inline, ServiceLifetime.Singleton)
             .UseLightweightSessions()
             .AddAsyncDaemon(DaemonMode.Solo);
         

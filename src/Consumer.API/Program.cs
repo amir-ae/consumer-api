@@ -3,6 +3,7 @@ using Consumer.API;
 using Consumer.API.Extensions.ErrorHandling;
 using Consumer.API.Endpoints.V1;
 using Consumer.API.Extensions.Caching;
+using Consumer.API.Extensions.Database;
 using Consumer.Application;
 using Serilog;
 
@@ -24,6 +25,7 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+    app.CreateDatabase();
 }
 
 app.UseSerilogRequestLogging();

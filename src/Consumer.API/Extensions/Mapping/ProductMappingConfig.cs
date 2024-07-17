@@ -1,5 +1,4 @@
 using Mapster;
-
 using Consumer.API.Contract.V1.Products.Requests;
 using Consumer.API.Contract.V1.Products.Responses;
 using Consumer.Application.Common.Commands;
@@ -35,12 +34,14 @@ public class ProductMappingConfig : IRegister
         
         config.NewConfig<Product, ProductForListingResponse>()
             .Map(response => response.Orders, customer => customer.ProductOrders);
-            
+
         config.NewConfig<Product, ProductResponse>()
             .Map(response => response.Orders, customer => customer.ProductOrders)
             .Map(response => response.Owner, product => product.ProductCustomers
-                .FirstOrDefault(pc => pc.Customer != null && pc.Customer.Id == product.OwnerId))
+                .Select(pc => pc.Customer)
+                .FirstOrDefault(c => c != null && c.Id == product.OwnerId))
             .Map(response => response.Dealer, product => product.ProductCustomers
-            .FirstOrDefault(pc => pc.Customer != null && pc.Customer.Id == product.DealerId));
+                .Select(pc => pc.Customer)
+                .FirstOrDefault(c => c != null && c.Id == product.DealerId));
     }
 }

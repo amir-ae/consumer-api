@@ -125,7 +125,7 @@ public class CustomerProjection : FlatTableProjection
             map.Increment(nameof(Customer.Version).ToSnakeCase());
         });
         
-        Project<CustomerActivatedEvent>(map =>
+        /*Project<CustomerActivatedEvent>(map =>
         {
             map.SetValue(nameof(Customer.IsActive).ToSnakeCase(), 1);
             map.Map(x => x.ActivatedAt, nameof(Customer.LastModifiedAt).ToSnakeCase());
@@ -155,6 +155,6 @@ public class CustomerProjection : FlatTableProjection
             map.Map(x => x.UndeletedAt, nameof(Customer.LastModifiedAt).ToSnakeCase());
             map.Map(x => x.Actor.Value, nameof(Customer.LastModifiedBy).ToSnakeCase());
             map.Increment(nameof(Customer.Version).ToSnakeCase());
-        });
+        });*/
     }
 }

@@ -1,8 +1,7 @@
 ﻿using Consumer.Domain.Customers;
 using Consumer.Infrastructure.Common.Persistence.Configurations;
-using Consumer.Infrastructure.Customers.Projections;
-using Marten;
 using Marten.Events.Projections;
+using Marten;
 
 namespace Consumer.Infrastructure.Customers.Configurations;
 
@@ -12,7 +11,6 @@ public class MartenTableMetaDataCustomer : MartenTableMetaDataBase
     {
         storeOptions.Schema.For<Customer>().Identity(x => x.AggregateId);
         storeOptions.Schema.For<Customer>().UseNumericRevisions(true);
-        //storeOptions.Projections.Snapshot<Customer>(SnapshotLifecycle.Inline);
-        storeOptions.Projections.Add<CustomerProjection>(ProjectionLifecycle.Inline);
+        storeOptions.Projections.Snapshot<Customer>(SnapshotLifecycle.Inline);
     }
 }
